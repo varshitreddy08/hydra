@@ -146,8 +146,21 @@ function buildGraph(round: NegotiationRound | null) {
 }
 
 export function NegotiationGraph() {
-  const { activeRound, rounds } = useSimulationStore();
+  const { activeRound, rounds, resources, patients } = useSimulationStore();
   const displayRound = activeRound ?? rounds[0] ?? null;
+
+  // Build resource name lookup: agentId → resource name
+  const agentToName = Object.fromEntries(
+    resources.map((r) => {
+      // agents have id = "agent-<resourceId>"
+      return [`agent-${r.id}`, r.name];
+    })
+  );
+
+  // Patient MRN lookup
+  const patientMrn = displayRound
+    ? (patients.find((p) => p.id === displayRound.patientId)?.mrn ?? displayRound.patientId.slice(0, 8))
+    : "";
 
   const { nodes: initialNodes, edges: initialEdges } = buildGraph(displayRound);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -155,8 +168,18 @@ export function NegotiationGraph() {
 
   useEffect(() => {
     const { nodes: newNodes, edges: newEdges } = buildGraph(displayRound);
-    setNodes(newNodes);
+    // Patch in real names
+    const patched = newNodes.map((n) => {
+      if (n.id === "patient") {
+        return { ...n, data: { ...n.data, label: patientMrn || n.data.label } };
+      }
+      const name = agentToName[n.id];
+      if (name) return { ...n, data: { ...n.data, label: name } };
+      return n;
+    });
+    setNodes(patched);
     setEdges(newEdges);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayRound, setNodes, setEdges]);
 
   if (!displayRound) {
