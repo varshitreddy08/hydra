@@ -6,6 +6,7 @@ import type {
   Patient,
   Resource,
   ResourceAgent,
+  Hospital,
   NegotiationRound,
   AllocationDecision,
   AuditLogEntry,
@@ -18,6 +19,7 @@ import {
   seedResources,
   seedPatients,
   seedAgents,
+  seedHospitals,
   generateRandomPatient,
 } from "@/lib/simulation/seed";
 import {
@@ -33,8 +35,17 @@ const MAX_AUDIT_LOG = 500;
 const MAX_ROUNDS = 100;
 const PATIENT_ARRIVAL_PROBABILITY = 0.3; // 30% chance per tick
 
+export type LocationPermission = "unknown" | "requesting" | "granted" | "denied";
+
 interface SimulationStore {
+  // User location (global, requested on app startup)
+  userLocation: { lat: number; lng: number } | null;
+  locationPermission: LocationPermission;
+  setUserLocation: (pos: { lat: number; lng: number } | null) => void;
+  setLocationPermission: (status: LocationPermission) => void;
+
   // Core state
+  hospitals: Hospital[];
   patients: Patient[];
   resources: Resource[];
   agents: ResourceAgent[];
@@ -69,6 +80,11 @@ interface SimulationStore {
       | "dischargedAt"
     >
   ) => void;
+  addHospital: (hospital: Omit<Hospital, "id" | "createdAt">) => void;
+  addResource: (resource: Omit<Resource, "id" | "utilizationHistory" | "currentPatientId" | "createdAt" | "updatedAt">) => ResourceAgent;
+  updateResource: (id: string, patch: Partial<Pick<Resource, "name" | "location" | "status" | "capabilities">>) => void;
+  discardPatient: (patientId: string) => void;
+  forceAllocate: (patientId: string) => Promise<void>;
   tick_: () => Promise<void>;
   getMetrics: () => SimulationMetrics;
 }
@@ -112,6 +128,12 @@ async function persistAuditEntry(entry: AuditLogEntry) {
 
 export const useSimulationStore = create<SimulationStore>()(
   subscribeWithSelector((set, get) => ({
+    userLocation: null,
+    locationPermission: "unknown" as LocationPermission,
+    setUserLocation: (pos) => set({ userLocation: pos }),
+    setLocationPermission: (status) => set({ locationPermission: status }),
+
+    hospitals: seedHospitals(),
     patients: seedPatients(),
     resources: seedResources(),
     agents: seedAgents(seedResources()),
@@ -147,6 +169,7 @@ export const useSimulationStore = create<SimulationStore>()(
       if (id) clearInterval(id);
       const freshResources = seedResources();
       set({
+        hospitals: seedHospitals(),
         patients: seedPatients(),
         resources: freshResources,
         agents: seedAgents(freshResources),
@@ -160,6 +183,133 @@ export const useSimulationStore = create<SimulationStore>()(
         outcomeHistory: [],
         activeRound: null,
       });
+    },
+
+    addHospital: (hospitalData) => {
+      const hospital: Hospital = {
+        ...hospitalData,
+        id: `hospital-${crypto.randomUUID()}`,
+        createdAt: Date.now(),
+      };
+      set((state) => ({ hospitals: [...state.hospitals, hospital] }));
+    },
+
+    addResource: (resourceData) => {
+      const now = Date.now();
+      const newResource: Resource = {
+        ...resourceData,
+        id: `res-${crypto.randomUUID()}`,
+        utilizationHistory: [],
+        currentPatientId: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const newAgent: ResourceAgent = {
+        id: `agent-${newResource.id}`,
+        resourceId: newResource.id,
+        state: newResource.status === "MAINTENANCE" ? "MAINTENANCE" : "IDLE",
+        currentBid: null,
+        currentPatientId: null,
+        performanceMetrics: {
+          totalAllocations: 0,
+          bidsSubmitted: 0,
+          bidsWon: 0,
+          averageBidScore: 0,
+        },
+      };
+      set((state) => ({
+        resources: [...state.resources, newResource],
+        agents: [...state.agents, newAgent],
+      }));
+      return newAgent;
+    },
+
+    updateResource: (id, patch) => {
+      set((state) => ({
+        resources: state.resources.map((r) =>
+          r.id === id ? { ...r, ...patch, updatedAt: Date.now() } : r
+        ),
+        agents: state.agents.map((a) =>
+          a.resourceId === id && patch.status
+            ? {
+                ...a,
+                state:
+                  patch.status === "MAINTENANCE"
+                    ? ("MAINTENANCE" as const)
+                    : a.state === "MAINTENANCE"
+                    ? ("IDLE" as const)
+                    : a.state,
+              }
+            : a
+        ),
+      }));
+    },
+
+    discardPatient: (patientId) => {
+      const now = Date.now();
+      set((state) => ({
+        patients: state.patients.map((p) =>
+          p.id === patientId
+            ? { ...p, status: "DISCHARGED" as const, dischargedAt: now }
+            : p
+        ),
+        // Free any resources held by this patient
+        resources: state.resources.map((r) =>
+          r.currentPatientId === patientId
+            ? { ...r, status: "AVAILABLE" as const, currentPatientId: null, updatedAt: now }
+            : r
+        ),
+        agents: state.agents.map((a) =>
+          a.currentPatientId === patientId
+            ? { ...a, state: "IDLE" as const, currentPatientId: null, currentBid: null }
+            : a
+        ),
+      }));
+    },
+
+    forceAllocate: async (patientId) => {
+      const state = get();
+      const patient = state.patients.find((p) => p.id === patientId);
+      if (!patient || patient.status === "DISCHARGED" || patient.status === "ALLOCATED") return;
+
+      set((s) => ({
+        patients: s.patients.map((p) =>
+          p.id === patientId ? { ...p, status: "IN_NEGOTIATION" as const } : p
+        ),
+      }));
+
+      try {
+        const current = get();
+        const result = await runNegotiationRound(
+          { ...patient, status: "IN_NEGOTIATION" },
+          current.resources,
+          current.agents
+        );
+        const now = Date.now();
+        set((s) => ({
+          patients: s.patients.map((p) =>
+            p.id === patientId ? result.updatedPatient : p
+          ),
+          resources: s.resources.map(
+            (r) => result.updatedResources.find((ur) => ur.id === r.id) ?? r
+          ),
+          agents: s.agents.map(
+            (a) => result.updatedAgents.find((ua) => ua.id === a.id) ?? a
+          ),
+          decisions: [result.decision, ...s.decisions].slice(0, MAX_DECISIONS),
+          auditLog: [result.auditEntry, ...s.auditLog].slice(0, MAX_AUDIT_LOG),
+          rounds: [result.round, ...s.rounds].slice(0, MAX_ROUNDS),
+          activeRound: result.round,
+        }));
+        persistDecision(result.decision);
+        persistAuditEntry(result.auditEntry);
+      } catch {
+        set((s) => ({
+          patients: s.patients.map((p) =>
+            p.id === patientId ? { ...p, status: "WAITING" as const } : p
+          ),
+        }));
+      }
     },
 
     admitPatient: (patientData) => {
