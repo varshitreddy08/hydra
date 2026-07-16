@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    if (profile?.role !== "admin") {
+    if (!["admin", "super_admin"].includes(profile?.role ?? "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const { email, password, role, fullName, hospitalId, hospitalData } = body as {
       email: string;
       password: string;
-      role: "admin" | "viewer" | "hospital_member";
+      role: "super_admin" | "admin" | "viewer" | "hospital_member";
       fullName: string;
       hospitalId?: string;
       hospitalData?: {
@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Password must be 8–128 characters" }, { status: 400 });
     }
 
-    if (!["admin", "viewer", "hospital_member"].includes(role)) {
-      return NextResponse.json({ error: "Role must be admin, viewer, or hospital_member" }, { status: 400 });
+    if (!["super_admin", "admin", "viewer", "hospital_member"].includes(role)) {
+      return NextResponse.json({ error: "Role must be super_admin, admin, viewer, or hospital_member" }, { status: 400 });
     }
 
     if (role === "hospital_member" && !hospitalId) {

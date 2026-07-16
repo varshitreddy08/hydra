@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useId } from "react";
-import { X, UserPlus, GitBranch, Check } from "lucide-react";
+import { useState, useId, useMemo } from "react";
+import { X, UserPlus, GitBranch, Check, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
 import { useSimulationStore } from "@/lib/store/simulationStore";
 import { cn } from "@/lib/utils/cn";
 import type { ClinicalCondition, ResourceType } from "@/types";
@@ -60,7 +60,7 @@ interface Props {
 }
 
 export function AdmitWithReferralDialog({ open, onClose, currentHospitalId }: Props) {
-  const { admitPatient, hospitals } = useSimulationStore();
+  const { admitPatient, hospitals, resources } = useSimulationStore();
   const formId = useId();
 
   const [age, setAge] = useState("");
@@ -78,7 +78,26 @@ export function AdmitWithReferralDialog({ open, onClose, currentHospitalId }: Pr
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const otherHospitals = hospitals.filter((h) => h.id !== currentHospitalId);
+  const requiredTypes = CONDITION_RESOURCES[condition].types;
+
+  // Rank other hospitals by real resource availability for the current condition
+  const rankedHospitals = useMemo(() => {
+    return hospitals
+      .filter((h) => h.id !== currentHospitalId)
+      .map((h) => {
+        const hRes = resources.filter((r) => r.hospitalId === h.id);
+        const available = hRes.filter((r) => r.status === "AVAILABLE").length;
+        const total = hRes.length;
+        const matchedTypes = requiredTypes.filter((type) =>
+          hRes.some((r) => r.type === type && r.status === "AVAILABLE")
+        );
+        const matchScore = requiredTypes.length > 0
+          ? matchedTypes.length / requiredTypes.length
+          : 0;
+        return { ...h, available, total, matchedTypes, matchScore };
+      })
+      .sort((a, b) => b.matchScore - a.matchScore);
+  }, [hospitals, resources, currentHospitalId, requiredTypes]);
 
   function toggleReferral(id: string) {
     setReferredIds((prev) => {
@@ -217,7 +236,7 @@ export function AdmitWithReferralDialog({ open, onClose, currentHospitalId }: Pr
             </div>
 
             {/* Referral */}
-            {otherHospitals.length > 0 && (
+            {rankedHospitals.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <GitBranch className="w-3.5 h-3.5 text-purple-400" />
@@ -227,24 +246,73 @@ export function AdmitWithReferralDialog({ open, onClose, currentHospitalId }: Pr
                   </p>
                 </div>
                 <div className="grid grid-cols-1 gap-2">
-                  {otherHospitals.map((h) => {
+                  {rankedHospitals.map((h) => {
                     const checked = referredIds.has(h.id);
+                    const isFull    = h.matchScore === 1;
+                    const isPartial = h.matchScore > 0 && h.matchScore < 1;
+                    const borderCls = checked
+                      ? "border-purple-500/40 bg-purple-500/10"
+                      : isFull
+                      ? "border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50"
+                      : isPartial
+                      ? "border-amber-500/20 bg-amber-500/5 hover:border-amber-500/40"
+                      : "border-[#1e2d4a] bg-[#080c18] hover:border-purple-500/30";
+
                     return (
                       <button
                         key={h.id}
                         type="button"
                         onClick={() => toggleReferral(h.id)}
-                        className={`flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all ${
-                          checked
-                            ? "bg-purple-500/10 border-purple-500/40"
-                            : "bg-[#080c18] border-[#1e2d4a] hover:border-purple-500/30"
-                        }`}
+                        className={`flex items-start justify-between px-4 py-3 rounded-xl border text-left transition-all ${borderCls}`}
                       >
-                        <div>
-                          <p className={`text-sm font-medium ${checked ? "text-purple-200" : "text-slate-300"}`}>{h.name}</p>
-                          {h.address && <p className="text-[10px] text-slate-600 mt-0.5">{h.address}</p>}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className={`text-sm font-medium ${checked ? "text-purple-200" : "text-white"}`}>
+                              {h.name}
+                            </p>
+                            {isFull && (
+                              <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
+                                <CheckCircle2 className="w-3 h-3" /> Full match
+                              </span>
+                            )}
+                            {isPartial && (
+                              <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400">
+                                <AlertCircle className="w-3 h-3" /> Partial ({h.matchedTypes.length}/{requiredTypes.length})
+                              </span>
+                            )}
+                            {h.matchScore === 0 && requiredTypes.length > 0 && (
+                              <span className="flex items-center gap-1 text-[10px] font-semibold text-red-400">
+                                <XCircle className="w-3 h-3" /> No match
+                              </span>
+                            )}
+                          </div>
+                          {h.address && (
+                            <p className="text-[10px] text-slate-600 mt-0.5 truncate">{h.address}</p>
+                          )}
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            {requiredTypes.map((type) => {
+                              const avail = h.matchedTypes.includes(type);
+                              return (
+                                <span
+                                  key={type}
+                                  className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${
+                                    avail
+                                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                                      : "border-red-500/20 bg-red-500/10 text-red-400"
+                                  }`}
+                                >
+                                  {type.replace(/_/g, " ")} {avail ? "✓" : "✗"}
+                                </span>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[10px] text-slate-600 mt-1">
+                            {h.available}/{h.total} resources available
+                          </p>
                         </div>
-                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${checked ? "bg-purple-500 border-purple-500" : "border-slate-600"}`}>
+                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 mt-0.5 ml-3 ${
+                          checked ? "bg-purple-500 border-purple-500" : "border-slate-600"
+                        }`}>
                           {checked && <Check className="w-3 h-3 text-white" />}
                         </div>
                       </button>

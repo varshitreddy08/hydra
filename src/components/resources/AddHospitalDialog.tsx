@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Building2, MapPin, Loader2, Navigation, Phone, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, Building2, MapPin, Loader2, Phone, AlertCircle } from "lucide-react";
 import { useSimulationStore } from "@/lib/store/simulationStore";
 
 interface AddHospitalDialogProps {
@@ -12,30 +12,6 @@ interface AddHospitalDialogProps {
 interface LatLng {
   lat: number;
   lng: number;
-}
-
-async function reverseGeocode(lat: number, lng: number): Promise<string> {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
-      { headers: { "Accept-Language": "en", "User-Agent": "HydraHospital/1.0" } }
-    );
-    const data = await res.json();
-    if (data.display_name) {
-      const a = data.address ?? {};
-      const parts = [
-        a.house_number && a.road ? `${a.house_number} ${a.road}` : a.road,
-        a.suburb ?? a.neighbourhood ?? a.quarter,
-        a.city ?? a.town ?? a.village ?? a.municipality,
-        a.state,
-        a.country,
-      ].filter(Boolean);
-      return parts.slice(0, 4).join(", ");
-    }
-  } catch {
-    // silent
-  }
-  return "";
 }
 
 async function forwardGeocode(address: string): Promise<LatLng | null> {
@@ -52,39 +28,17 @@ async function forwardGeocode(address: string): Promise<LatLng | null> {
   return null;
 }
 
-type LocState = "idle" | "requesting" | "success" | "denied" | "error";
-
 export function AddHospitalDialog({ open, onClose }: AddHospitalDialogProps) {
-  const { addHospital, setUserLocation, setLocationPermission } = useSimulationStore();
+  const { addHospital } = useSimulationStore();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [coords, setCoords] = useState<LatLng | null>(null);
-  const [locState, setLocState] = useState<LocState>("idle");
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
 
   if (!open) return null;
-
-  async function handleDetectLocation() {
-    if (!navigator.geolocation) { setLocState("error"); return; }
-    setLocState("requesting");
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const c: LatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        // Update global store so the rest of the app benefits too
-        setUserLocation(c);
-        setLocationPermission("granted");
-        setCoords(c);
-        const addr = await reverseGeocode(c.lat, c.lng);
-        if (addr) setAddress(addr);
-        setLocState("success");
-      },
-      (err) => setLocState(err.code === 1 ? "denied" : "error"),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }
 
   async function handleSearchAddress() {
     if (!address.trim()) return;
@@ -94,7 +48,6 @@ export function AddHospitalDialog({ open, onClose }: AddHospitalDialogProps) {
     setSearchLoading(false);
     if (result) {
       setCoords(result);
-      setLocState("success");
     } else {
       setSearchError("Address not found — try a more specific location.");
     }
@@ -102,7 +55,7 @@ export function AddHospitalDialog({ open, onClose }: AddHospitalDialogProps) {
 
   function handleClose() {
     setName(""); setPhone(""); setAddress(""); setCoords(null);
-    setLocState("idle"); setSearchError("");
+    setSearchError("");
     onClose();
   }
 
@@ -117,16 +70,6 @@ export function AddHospitalDialog({ open, onClose }: AddHospitalDialogProps) {
     });
     handleClose();
   }
-
-  const locMessages: Record<LocState, { text: string; cls: string; icon: React.ReactNode } | null> = {
-    idle: null,
-    requesting: { text: "Detecting location…", cls: "text-blue-400", icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
-    success: { text: "Location captured", cls: "text-emerald-400", icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
-    denied: { text: "Location Permission denied — type the address manually.", cls: "text-amber-400", icon: <AlertCircle className="h-3.5 w-3.5" /> },
-    error: { text: "GPS unavailable — type the address below.", cls: "text-amber-400", icon: <AlertCircle className="h-3.5 w-3.5" /> },
-  };
-
-  const msg = locMessages[locState];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
@@ -202,25 +145,8 @@ export function AddHospitalDialog({ open, onClose }: AddHospitalDialogProps) {
                 >
                   {searchLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Search"}
                 </button>
-                <button
-                  type="button"
-                  onClick={handleDetectLocation}
-                  disabled={locState === "requesting"}
-                  title="Use current Location Permission"
-                  className="shrink-0 flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500 active:scale-95 transition-all disabled:opacity-60"
-                >
-                  {locState === "requesting"
-                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    : <Navigation className="h-3.5 w-3.5" />}
-                  {locState === "requesting" ? "…" : "Locate"}
-                </button>
               </div>
 
-              {msg && (
-                <p className={`mt-1.5 flex items-center gap-1.5 text-[11px] font-medium ${msg.cls}`}>
-                  {msg.icon} {msg.text}
-                </p>
-              )}
               {searchError && (
                 <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-amber-400">
                   <AlertCircle className="h-3 w-3" /> {searchError}

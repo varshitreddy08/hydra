@@ -11,13 +11,13 @@ import {
   FileText,
   BarChart3,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+const sharedNavItems = [
   { href: "/negotiation", label: "Negotiation", icon: GitBranch },
   { href: "/patients", label: "Patients", icon: Users },
   { href: "/resources", label: "Resources", icon: Database },
@@ -28,6 +28,13 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const isSuperAdmin = pathname.startsWith("/super-admin");
+
+  const dashboardItem = isSuperAdmin
+    ? { href: "/super-admin", label: "Super Admin", icon: Shield }
+    : { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard };
+
+  const navItems = [dashboardItem, ...sharedNavItems];
 
   async function signOut() {
     const supabase = createClient();
@@ -45,7 +52,9 @@ export function Sidebar() {
         </div>
         <div className="hidden lg:block">
           <p className="text-sm font-bold text-white leading-tight">MedNegotiate</p>
-          <p className="text-xs text-slate-500">Emergency Platform</p>
+          <p className="text-xs text-slate-500">
+            {isSuperAdmin ? "Super Admin" : "Emergency Platform"}
+          </p>
         </div>
       </div>
 
@@ -53,6 +62,7 @@ export function Sidebar() {
       <nav className="flex-1 px-2 py-4 space-y-1">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
+          const isSuperAdminLink = href === "/super-admin";
           return (
             <Link
               key={href}
@@ -60,7 +70,9 @@ export function Sidebar() {
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                 active
-                  ? "bg-blue-600/20 text-blue-300 border border-blue-500/30"
+                  ? isSuperAdminLink
+                    ? "bg-violet-600/20 text-violet-300 border border-violet-500/30"
+                    : "bg-blue-600/20 text-blue-300 border border-blue-500/30"
                   : "text-slate-400 hover:bg-[#1c2a42] hover:text-slate-200"
               )}
             >

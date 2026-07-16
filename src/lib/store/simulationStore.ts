@@ -16,13 +16,6 @@ import type {
   NegotiationOutcomeData,
 } from "@/types";
 import {
-  seedResources,
-  seedPatients,
-  seedAgents,
-  seedHospitals,
-  generateRandomPatient,
-} from "@/lib/simulation/seed";
-import {
   runNegotiationRound,
   processDischarges,
   computeTriageScore,
@@ -33,7 +26,6 @@ const TICK_INTERVAL_MS = 4000;
 const MAX_DECISIONS = 200;
 const MAX_AUDIT_LOG = 500;
 const MAX_ROUNDS = 100;
-const PATIENT_ARRIVAL_PROBABILITY = 0.3; // 30% chance per tick
 
 export type LocationPermission = "unknown" | "requesting" | "granted" | "denied";
 
@@ -84,6 +76,7 @@ interface SimulationStore {
   loadHospitalsFromDB: () => Promise<void>;
   addResource: (resource: Omit<Resource, "id" | "utilizationHistory" | "currentPatientId" | "createdAt" | "updatedAt">) => ResourceAgent;
   updateResource: (id: string, patch: Partial<Pick<Resource, "name" | "location" | "status" | "capabilities">>) => void;
+  loadResourcesFromDB: () => Promise<void>;
   discardPatient: (patientId: string) => void;
   addReferral: (patientId: string, hospitalIds: string[]) => void;
   forceAllocate: (patientId: string) => Promise<void>;
@@ -113,6 +106,28 @@ async function persistDecision(decision: AllocationDecision) {
   }
 }
 
+async function persistResourceUpdates(resources: Resource[]) {
+  if (resources.length === 0) return;
+  try {
+    const supabase = createClient();
+    const rows = resources.map((r) => ({
+      id: r.id,
+      hospital_id: r.hospitalId,
+      type: r.type,
+      name: r.name,
+      status: r.status,
+      location: r.location,
+      capabilities: r.capabilities,
+      current_patient_id: r.currentPatientId ?? null,
+      updated_at: new Date(r.updatedAt).toISOString(),
+    }));
+    const { error } = await supabase.from("resources").upsert(rows, { onConflict: "id" });
+    if (error) console.error("[persistResourceUpdates] DB write failed:", error.message);
+  } catch (err) {
+    console.error("[persistResourceUpdates] unexpected error:", err);
+  }
+}
+
 async function persistAuditEntry(entry: AuditLogEntry) {
   try {
     const supabase = createClient();
@@ -136,10 +151,10 @@ export const useSimulationStore = create<SimulationStore>()(
     setUserLocation: (pos) => set({ userLocation: pos }),
     setLocationPermission: (status) => set({ locationPermission: status }),
 
-    hospitals: seedHospitals(),
-    patients: seedPatients(),
-    resources: seedResources(),
-    agents: seedAgents(seedResources()),
+    hospitals: [],
+    patients: [],
+    resources: [],
+    agents: [],
     rounds: [],
     decisions: [],
     auditLog: [],
@@ -170,12 +185,11 @@ export const useSimulationStore = create<SimulationStore>()(
     reset: () => {
       const id = get().intervalId;
       if (id) clearInterval(id);
-      const freshResources = seedResources();
       set({
-        hospitals: seedHospitals(),
-        patients: seedPatients(),
-        resources: freshResources,
-        agents: seedAgents(freshResources),
+        hospitals: [],
+        patients: [],
+        resources: [],
+        agents: [],
         rounds: [],
         decisions: [],
         auditLog: [],
@@ -186,6 +200,9 @@ export const useSimulationStore = create<SimulationStore>()(
         outcomeHistory: [],
         activeRound: null,
       });
+      // Reload hospital and resource data from DB after reset
+      get().loadHospitalsFromDB();
+      get().loadResourcesFromDB();
     },
 
     addHospital: (hospitalData) => {
@@ -195,20 +212,24 @@ export const useSimulationStore = create<SimulationStore>()(
         createdAt: Date.now(),
       };
       set((state) => ({ hospitals: [...state.hospitals, hospital] }));
-      // Persist to Supabase
+      // Persist via admin API route (bypasses RLS)
       (async () => {
-        const supabase = createClient();
-        const { error } = await supabase.from("hospitals").upsert({
-          id: hospital.id,
-          name: hospital.name,
-          address: hospital.address,
-          phone: hospital.phone,
-          lat: hospital.lat ?? null,
-          lng: hospital.lng ?? null,
-          created_at: new Date(hospital.createdAt).toISOString(),
+        const res = await fetch("/api/admin/hospitals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: hospital.id,
+            name: hospital.name,
+            address: hospital.address,
+            phone: hospital.phone,
+            lat: hospital.lat ?? null,
+            lng: hospital.lng ?? null,
+            createdAt: hospital.createdAt,
+          }),
         });
-        if (error) {
-          console.error("[Hydra] Failed to save hospital to DB:", error.message);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          console.error("[Hydra] Failed to save hospital to DB:", err);
         }
       })();
     },
@@ -268,13 +289,16 @@ export const useSimulationStore = create<SimulationStore>()(
         resources: [...state.resources, newResource],
         agents: [...state.agents, newAgent],
       }));
+      // Persist new resource to Supabase
+      persistResourceUpdates([newResource]);
       return newAgent;
     },
 
     updateResource: (id, patch) => {
+      const updatedAt = Date.now();
       set((state) => ({
         resources: state.resources.map((r) =>
-          r.id === id ? { ...r, ...patch, updatedAt: Date.now() } : r
+          r.id === id ? { ...r, ...patch, updatedAt } : r
         ),
         agents: state.agents.map((a) =>
           a.resourceId === id && patch.status
@@ -290,6 +314,60 @@ export const useSimulationStore = create<SimulationStore>()(
             : a
         ),
       }));
+      // Persist to Supabase
+      (async () => {
+        const supabase = createClient();
+        const { error } = await supabase.from("resources").update({
+          ...patch,
+          updated_at: new Date(updatedAt).toISOString(),
+        }).eq("id", id);
+        if (error) console.error("[Hydra] Failed to update resource in DB:", error.message);
+      })();
+    },
+
+    loadResourcesFromDB: async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("resources")
+        .select("*")
+        .order("created_at", { ascending: true });
+      if (error) {
+        console.error("[Hydra] Failed to load resources from DB:", error.message);
+        return;
+      }
+      if (!data || data.length === 0) return;
+      const loaded: Resource[] = data.map((row) => ({
+        id: row.id,
+        hospitalId: row.hospital_id,
+        type: row.type,
+        name: row.name,
+        // Use DB status as-is — it reflects the real allocation state
+        status: row.status,
+        location: row.location ?? "",
+        capabilities: row.capabilities ?? [],
+        currentPatientId: row.current_patient_id ?? null,
+        utilizationHistory: [],
+        createdAt: new Date(row.created_at).getTime(),
+        updatedAt: new Date(row.updated_at).getTime(),
+      }));
+      set((state) => {
+        const dbIds = new Set(loaded.map((r) => r.id));
+        const seedsNotInDB = state.resources.filter((r) => !dbIds.has(r.id));
+        const freshAgents = [...seedsNotInDB, ...loaded].map((r) => ({
+          id: `agent-${r.id}`,
+          resourceId: r.id,
+          state: (r.status === "MAINTENANCE" ? "MAINTENANCE" : "IDLE") as ResourceAgent["state"],
+          currentBid: null,
+          currentPatientId: null,
+          performanceMetrics: {
+            totalAllocations: 0,
+            bidsSubmitted: 0,
+            bidsWon: 0,
+            averageBidScore: 0,
+          },
+        }));
+        return { resources: [...seedsNotInDB, ...loaded], agents: freshAgents };
+      });
     },
 
     addReferral: (patientId, hospitalIds) => {
@@ -358,6 +436,7 @@ export const useSimulationStore = create<SimulationStore>()(
         }));
         persistDecision(result.decision);
         persistAuditEntry(result.auditEntry);
+        persistResourceUpdates(result.updatedResources);
       } catch (err) {
         console.error("[forceAllocate] negotiation round failed:", err);
         set((s) => ({
@@ -407,6 +486,7 @@ export const useSimulationStore = create<SimulationStore>()(
         }));
         persistDecision(result.decision);
         persistAuditEntry(result.auditEntry);
+        persistResourceUpdates(result.updatedResources);
       } catch (err) {
         console.error("[forceAllocateToHospital] negotiation round failed:", err);
         set((s) => ({
@@ -444,33 +524,12 @@ export const useSimulationStore = create<SimulationStore>()(
       const { updatedPatients, updatedResources, updatedAgents } =
         processDischarges(state.patients, state.resources, state.agents);
 
-      // 2. Randomly admit a new patient
-      let currentPatients = updatedPatients;
-      if (Math.random() < PATIENT_ARRIVAL_PROBABILITY && currentPatients.filter(p => p.status === "WAITING").length < 10) {
-        const rawPatient = generateRandomPatient();
-        const triageScore = computeTriageScore(
-          rawPatient.condition,
-          rawPatient.vitals,
-          rawPatient.arrivedAt
-        );
-        const newPatient: Patient = {
-          ...rawPatient,
-          triageScore,
-          vitalsHistory: [rawPatient.vitals],
-          status: "WAITING",
-          allocatedResources: [],
-          treatmentStartedAt: null,
-          dischargedAt: null,
-        };
-        currentPatients = [...currentPatients, newPatient];
-      }
-
-      // 3. Find highest-priority waiting patient
-      const waitingPatients = currentPatients
+      // 2. Find highest-priority waiting patient
+      const waitingPatients = updatedPatients
         .filter((p) => p.status === "WAITING")
         .sort((a, b) => b.triageScore.raw - a.triageScore.raw);
 
-      let finalPatients = currentPatients;
+      let finalPatients = updatedPatients;
       let finalResources = updatedResources;
       let finalAgents = updatedAgents;
       let newDecisions = [...state.decisions];
@@ -520,6 +579,7 @@ export const useSimulationStore = create<SimulationStore>()(
           // Persist to Supabase (non-blocking)
           persistDecision(result.decision);
           persistAuditEntry(result.auditEntry);
+          persistResourceUpdates(result.updatedResources);
         } catch {
           // Reset patient status on error
           finalPatients = finalPatients.map((p) =>

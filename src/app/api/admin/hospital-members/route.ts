@@ -11,7 +11,7 @@ async function verifyAdmin() {
     .select("role")
     .eq("id", user.id)
     .single();
-  return profile?.role === "admin" ? supabase : null;
+  return ["admin", "super_admin"].includes(profile?.role ?? "") ? supabase : null;
 }
 
 // GET — list all hospital_member profiles with their hospital info

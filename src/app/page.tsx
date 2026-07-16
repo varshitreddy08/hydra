@@ -13,9 +13,8 @@ export default async function Home() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role === "hospital_member") {
-    redirect("/hospital-portal");
-  }
+  if (profile?.role === "hospital_member") redirect("/hospital-portal");
+  if (profile?.role === "super_admin") redirect("/super-admin");
 
   redirect("/dashboard");
 }

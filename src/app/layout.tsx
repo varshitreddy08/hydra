@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import StoreInitializer from "@/components/StoreInitializer";
 
 export const metadata: Metadata = {
   title: "MedNegotiate — Emergency Resource Allocation",
@@ -10,7 +11,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full">
-      <body className="h-full">{children}</body>
+      <body className="h-full">
+        <StoreInitializer />
+        {children}
+      </body>
     </html>
   );
 }

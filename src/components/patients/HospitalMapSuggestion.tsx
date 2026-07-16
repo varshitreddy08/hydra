@@ -1,12 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import { useSimulationStore } from "@/lib/store/simulationStore";
 import type { ClinicalCondition, ResourceType } from "@/types";
 import {
-  MapPin,
-  Loader2,
   Building2,
   CheckCircle2,
   XCircle,
@@ -15,15 +12,6 @@ import {
   Phone,
   Star,
 } from "lucide-react";
-
-const HospitalMapDynamic = dynamic(() => import("./HospitalMap"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full items-center justify-center rounded-xl bg-[#080c18]">
-      <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
-    </div>
-  ),
-});
 
 const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
   OPERATING_ROOM: "OR",
@@ -98,7 +86,7 @@ interface Props {
 }
 
 export function HospitalMapSuggestion({ condition, requiredTypes }: Props) {
-  const { hospitals, resources, userLocation, locationPermission } = useSimulationStore();
+  const { hospitals, resources, userLocation } = useSimulationStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const userPos: [number, number] | null = userLocation
@@ -153,42 +141,6 @@ export function HospitalMapSuggestion({ condition, requiredTypes }: Props) {
           </span>{" "}
           — sorted by availability + distance
         </p>
-      </div>
-
-      {/* Location status strip */}
-      {locationPermission === "requesting" && (
-        <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2 text-xs text-blue-400">
-          <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-          Acquiring your GPS location…
-        </div>
-      )}
-      {locationPermission === "granted" && userPos && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-400">
-          <MapPin className="h-3.5 w-3.5 shrink-0" />
-          Live location active — distances calculated from your position
-        </div>
-      )}
-      {locationPermission === "denied" && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-400">
-          <Navigation className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-          <span>
-            Location blocked — to enable, click the <strong>lock icon</strong> in your browser
-            address bar, set Location to Allow, then reload.
-          </span>
-        </div>
-      )}
-
-      {/* Map */}
-      <div
-        className="w-full overflow-hidden rounded-xl border border-[#1e2d4a]"
-        style={{ height: 170 }}
-      >
-        <HospitalMapDynamic
-          suggestions={suggestions}
-          userPos={userPos}
-          onSelectHospital={setSelectedId}
-          selectedId={selectedId}
-        />
       </div>
 
       {/* Best pick banner */}

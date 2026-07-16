@@ -5,14 +5,15 @@ import { KPICards } from "@/components/dashboard/KPICards";
 import { ResourceStatusGrid } from "@/components/dashboard/ResourceStatusGrid";
 import { SystemHealthBar } from "@/components/dashboard/SystemHealthBar";
 import { ActiveNegotiationPanel } from "@/components/dashboard/ActiveNegotiationPanel";
+import { HospitalStaffPanel } from "@/components/dashboard/HospitalStaffPanel";
+import { Shield } from "lucide-react";
 
-export default function DashboardPage() {
+export default function SuperAdminPage() {
   const { status, patients, decisions } = useSimulationStore();
 
   const waitingCount = patients.filter((p) => p.status === "WAITING").length;
   const criticalCount = patients.filter(
-    (p) =>
-      p.status === "WAITING" && p.triageScore.triageLevel === "P1_IMMEDIATE"
+    (p) => p.status === "WAITING" && p.triageScore.triageLevel === "P1_IMMEDIATE"
   ).length;
 
   return (
@@ -20,9 +21,15 @@ export default function DashboardPage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Shield className="h-4 w-4 text-violet-400" />
+            <span className="text-xs font-semibold text-violet-400 uppercase tracking-wider">
+              Super Admin
+            </span>
+          </div>
           <h1 className="text-xl font-bold text-white">Operations Dashboard</h1>
           <p className="text-sm text-slate-400 mt-0.5">
-            Real-time hospital resource allocation overview
+            Full control — hospital staff, resources, and real-time allocation
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -39,42 +46,26 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* System health bar */}
       <SystemHealthBar />
-
-      {/* KPI cards */}
       <KPICards />
 
-      {/* Main content grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Resource grid - takes 2 cols */}
         <div className="xl:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-slate-300">
-              Resource Status
-            </h2>
-            <span className="text-xs text-slate-500">
-              {status === "RUNNING" ? "Live" : "Paused"}
-            </span>
+            <h2 className="text-sm font-semibold text-slate-300">Resource Status</h2>
+            <span className="text-xs text-slate-500">{status === "RUNNING" ? "Live" : "Paused"}</span>
           </div>
           <ResourceStatusGrid />
         </div>
-
-        {/* Active negotiation panel */}
         <div>
-          <h2 className="text-sm font-semibold text-slate-300 mb-4">
-            Active Negotiation
-          </h2>
+          <h2 className="text-sm font-semibold text-slate-300 mb-4">Active Negotiation</h2>
           <ActiveNegotiationPanel />
         </div>
       </div>
 
-      {/* Recent decisions mini-list */}
       {decisions.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-300 mb-3">
-            Recent Decisions
-          </h2>
+          <h2 className="text-sm font-semibold text-slate-300 mb-3">Recent Decisions</h2>
           <div className="space-y-2">
             {decisions.slice(0, 5).map((d) => (
               <div
@@ -82,24 +73,18 @@ export default function DashboardPage() {
                 className="flex items-center justify-between bg-[#111b2e] border border-[#1e2d4a] rounded-lg px-4 py-3 text-xs"
               >
                 <div className="flex items-center gap-3">
-                  <span
-                    className={`px-2 py-0.5 rounded-full font-medium ${
-                      d.outcome === "ALLOCATED"
-                        ? "bg-emerald-500/20 text-emerald-300"
-                        : "bg-red-500/20 text-red-300"
-                    }`}
-                  >
+                  <span className={`px-2 py-0.5 rounded-full font-medium ${
+                    d.outcome === "ALLOCATED"
+                      ? "bg-emerald-500/20 text-emerald-300"
+                      : "bg-red-500/20 text-red-300"
+                  }`}>
                     {d.outcome}
                   </span>
-                  <span className="text-slate-400 font-mono">
-                    {d.patientId.slice(0, 8)}
-                  </span>
+                  <span className="text-slate-400 font-mono">{d.patientId.slice(0, 8)}</span>
                 </div>
                 <div className="flex items-center gap-4 text-slate-500">
                   <span>{d.decisionTimeMs}ms</span>
-                  <span className="font-mono text-xs">
-                    {d.auditHash.slice(0, 12)}…
-                  </span>
+                  <span className="font-mono text-xs">{d.auditHash.slice(0, 12)}…</span>
                 </div>
               </div>
             ))}
@@ -110,14 +95,13 @@ export default function DashboardPage() {
       {status === "IDLE" && (
         <div className="text-center py-12 text-slate-500">
           <p className="text-sm">
-            Click{" "}
-            <span className="text-emerald-400 font-medium">
-              Start Simulation
-            </span>{" "}
-            in the toolbar to begin the multi-agent negotiation.
+            Click <span className="text-emerald-400 font-medium">Start Simulation</span> in the toolbar to begin.
           </p>
         </div>
       )}
+
+      {/* Hospital Staff Management — Super Admin only */}
+      <HospitalStaffPanel />
     </div>
   );
 }
