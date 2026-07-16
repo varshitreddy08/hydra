@@ -85,6 +85,7 @@ interface SimulationStore {
   updateResource: (id: string, patch: Partial<Pick<Resource, "name" | "location" | "status" | "capabilities">>) => void;
   discardPatient: (patientId: string) => void;
   forceAllocate: (patientId: string) => Promise<void>;
+  forceAllocateToHospital: (patientId: string, hospitalId: string) => Promise<void>;
   tick_: () => Promise<void>;
   getMetrics: () => SimulationMetrics;
 }
@@ -286,6 +287,54 @@ export const useSimulationStore = create<SimulationStore>()(
           current.agents
         );
         const now = Date.now();
+        set((s) => ({
+          patients: s.patients.map((p) =>
+            p.id === patientId ? result.updatedPatient : p
+          ),
+          resources: s.resources.map(
+            (r) => result.updatedResources.find((ur) => ur.id === r.id) ?? r
+          ),
+          agents: s.agents.map(
+            (a) => result.updatedAgents.find((ua) => ua.id === a.id) ?? a
+          ),
+          decisions: [result.decision, ...s.decisions].slice(0, MAX_DECISIONS),
+          auditLog: [result.auditEntry, ...s.auditLog].slice(0, MAX_AUDIT_LOG),
+          rounds: [result.round, ...s.rounds].slice(0, MAX_ROUNDS),
+          activeRound: result.round,
+        }));
+        persistDecision(result.decision);
+        persistAuditEntry(result.auditEntry);
+      } catch {
+        set((s) => ({
+          patients: s.patients.map((p) =>
+            p.id === patientId ? { ...p, status: "WAITING" as const } : p
+          ),
+        }));
+      }
+    },
+
+    forceAllocateToHospital: async (patientId, hospitalId) => {
+      const state = get();
+      const patient = state.patients.find((p) => p.id === patientId);
+      if (!patient || patient.status === "DISCHARGED" || patient.status === "ALLOCATED") return;
+
+      set((s) => ({
+        patients: s.patients.map((p) =>
+          p.id === patientId ? { ...p, status: "IN_NEGOTIATION" as const } : p
+        ),
+      }));
+
+      try {
+        const current = get();
+        const hospitalResources = current.resources.filter((r) => r.hospitalId === hospitalId);
+        const resourceIds = new Set(hospitalResources.map((r) => r.id));
+        const hospitalAgents = current.agents.filter((a) => resourceIds.has(a.resourceId));
+
+        const result = await runNegotiationRound(
+          { ...patient, status: "IN_NEGOTIATION" },
+          hospitalResources,
+          hospitalAgents
+        );
         set((s) => ({
           patients: s.patients.map((p) =>
             p.id === patientId ? result.updatedPatient : p

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils/cn";
 import { formatCondition, formatWaitTime } from "@/lib/utils/formatters";
 import { PatientContextMenu, type ContextMenuPosition } from "./PatientContextMenu";
 import { PatientHospitalModal } from "./PatientHospitalModal";
+import { AttachHospitalModal } from "./AttachHospitalModal";
 import type { Patient } from "@/types";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -40,10 +41,11 @@ interface PatientQueueProps {
 }
 
 export function PatientQueue({ patients }: PatientQueueProps) {
-  const { forceAllocate, discardPatient } = useSimulationStore();
+  const { forceAllocate, forceAllocateToHospital, discardPatient } = useSimulationStore();
 
   const [contextMenu, setContextMenu] = useState<{ patientId: string; pos: ContextMenuPosition } | null>(null);
   const [hospitalModalPatientId, setHospitalModalPatientId] = useState<string | null>(null);
+  const [attachModalPatientId, setAttachModalPatientId] = useState<string | null>(null);
   const [allocatingId, setAllocatingId] = useState<string | null>(null);
 
   const sortedPatients = [...patients].sort((a, b) => b.triageScore.raw - a.triageScore.raw);
@@ -54,6 +56,10 @@ export function PatientQueue({ patients }: PatientQueueProps) {
 
   const hospitalPatient = hospitalModalPatientId
     ? (patients.find((p) => p.id === hospitalModalPatientId) ?? null)
+    : null;
+
+  const attachPatient = attachModalPatientId
+    ? (patients.find((p) => p.id === attachModalPatientId) ?? null)
     : null;
 
   function handleContextMenu(e: React.MouseEvent, patient: Patient) {
@@ -192,6 +198,7 @@ export function PatientQueue({ patients }: PatientQueueProps) {
           onClose={() => setContextMenu(null)}
           onAllocate={() => handleAllocate(contextPatient.id)}
           onWhichHospital={() => setHospitalModalPatientId(contextPatient.id)}
+          onAttachHospital={() => setAttachModalPatientId(contextPatient.id)}
           onDiscard={() => discardPatient(contextPatient.id)}
           allocating={allocatingId === contextPatient.id}
         />
@@ -201,6 +208,14 @@ export function PatientQueue({ patients }: PatientQueueProps) {
         <PatientHospitalModal
           patient={hospitalPatient}
           onClose={() => setHospitalModalPatientId(null)}
+        />
+      )}
+
+      {attachPatient && (
+        <AttachHospitalModal
+          patient={attachPatient}
+          onClose={() => setAttachModalPatientId(null)}
+          onAttach={(hospitalId) => forceAllocateToHospital(attachPatient.id, hospitalId)}
         />
       )}
     </>

@@ -7,6 +7,7 @@ import {
   Trash2,
   Loader2,
   Zap,
+  Link2,
 } from "lucide-react";
 import type { Patient } from "@/types";
 
@@ -21,6 +22,7 @@ interface PatientContextMenuProps {
   onClose: () => void;
   onAllocate: () => void;
   onWhichHospital: () => void;
+  onAttachHospital: () => void;
   onDiscard: () => void;
   allocating: boolean;
 }
@@ -31,6 +33,7 @@ export function PatientContextMenu({
   onClose,
   onAllocate,
   onWhichHospital,
+  onAttachHospital,
   onDiscard,
   allocating,
 }: PatientContextMenuProps) {
@@ -54,7 +57,7 @@ export function PatientContextMenu({
 
   // Adjust so menu stays inside viewport
   const menuWidth = 220;
-  const menuHeight = 180;
+  const menuHeight = 230;
   const x = Math.min(position.x, window.innerWidth - menuWidth - 8);
   const y = Math.min(position.y, window.innerHeight - menuHeight - 8);
 
@@ -89,6 +92,16 @@ export function PatientContextMenu({
           disabled={!canAllocate || allocating}
           iconCls={canAllocate ? "text-blue-400" : "text-slate-600"}
           spin={allocating}
+        />
+
+        {/* Attach to Hospital */}
+        <MenuItem
+          icon={Link2}
+          label="Attach to Hospital"
+          description="Manually pick a hospital for this patient"
+          onClick={() => { onAttachHospital(); onClose(); }}
+          disabled={!canAllocate || allocating}
+          iconCls={canAllocate ? "text-violet-400" : "text-slate-600"}
         />
 
         {/* Which Hospital */}
