@@ -196,44 +196,43 @@ export const useSimulationStore = create<SimulationStore>()(
       set((state) => ({ hospitals: [...state.hospitals, hospital] }));
       // Persist to Supabase
       (async () => {
-        try {
-          const supabase = createClient();
-          await supabase.from("hospitals").upsert({
-            id: hospital.id,
-            name: hospital.name,
-            address: hospital.address,
-            phone: hospital.phone,
-            lat: hospital.lat ?? null,
-            lng: hospital.lng ?? null,
-            created_at: new Date(hospital.createdAt).toISOString(),
-          });
-        } catch {
-          // Non-critical — hospital still lives in local store
+        const supabase = createClient();
+        const { error } = await supabase.from("hospitals").upsert({
+          id: hospital.id,
+          name: hospital.name,
+          address: hospital.address,
+          phone: hospital.phone,
+          lat: hospital.lat ?? null,
+          lng: hospital.lng ?? null,
+          created_at: new Date(hospital.createdAt).toISOString(),
+        });
+        if (error) {
+          console.error("[Hydra] Failed to save hospital to DB:", error.message);
         }
       })();
     },
 
     loadHospitalsFromDB: async () => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("hospitals")
-          .select("*")
-          .order("created_at", { ascending: true });
-        if (error || !data || data.length === 0) return;
-        const loaded: Hospital[] = data.map((row) => ({
-          id: row.id,
-          name: row.name,
-          address: row.address ?? "",
-          phone: row.phone ?? "",
-          lat: row.lat ?? undefined,
-          lng: row.lng ?? undefined,
-          createdAt: new Date(row.created_at).getTime(),
-        }));
-        set({ hospitals: loaded });
-      } catch {
-        // Fall back to seed data already in store
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("hospitals")
+        .select("*")
+        .order("created_at", { ascending: true });
+      if (error) {
+        console.error("[Hydra] Failed to load hospitals from DB:", error.message);
+        return;
       }
+      if (!data || data.length === 0) return;
+      const loaded: Hospital[] = data.map((row) => ({
+        id: row.id,
+        name: row.name,
+        address: row.address ?? "",
+        phone: row.phone ?? "",
+        lat: row.lat ?? undefined,
+        lng: row.lng ?? undefined,
+        createdAt: new Date(row.created_at).getTime(),
+      }));
+      set({ hospitals: loaded });
     },
 
     addResource: (resourceData) => {
