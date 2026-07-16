@@ -56,11 +56,30 @@ export default async function HospitalPortalPage() {
     .eq("id", profile.hospital_id)
     .single();
 
+  if (!hospital) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-white">
+        <div className="w-full max-w-sm text-center space-y-4">
+          <h1 className="text-xl font-bold text-slate-900">Hospital Not Found</h1>
+          <p className="text-slate-500 text-sm leading-relaxed">
+            Your account is linked to a hospital that no longer exists in the system.
+            Please contact your system administrator.
+          </p>
+          <form action="/auth/signout" method="post">
+            <button type="submit" className="text-sm text-slate-400 hover:text-slate-600 underline transition-colors">
+              Sign out
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <HospitalPortalShell
       hospitalId={profile.hospital_id}
-      hospitalName={hospital?.name ?? "Unknown Hospital"}
-      hospitalAddress={hospital?.address ?? ""}
+      hospitalName={hospital.name}
+      hospitalAddress={hospital.address ?? ""}
       staffName={profile.full_name ?? user.email ?? "Staff"}
     />
   );

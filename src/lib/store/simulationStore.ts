@@ -108,8 +108,8 @@ async function persistDecision(decision: AllocationDecision) {
       audit_hash: decision.auditHash,
       decided_at: new Date(decision.decidedAt).toISOString(),
     });
-  } catch {
-    // Non-critical: simulation continues even if DB write fails
+  } catch (err) {
+    console.error("[persistDecision] DB write failed:", err);
   }
 }
 
@@ -124,8 +124,8 @@ async function persistAuditEntry(entry: AuditLogEntry) {
       actor_type: entry.actorType,
       timestamp: new Date(entry.timestamp).toISOString(),
     });
-  } catch {
-    // Non-critical
+  } catch (err) {
+    console.error("[persistAuditEntry] DB write failed:", err);
   }
 }
 
@@ -358,7 +358,8 @@ export const useSimulationStore = create<SimulationStore>()(
         }));
         persistDecision(result.decision);
         persistAuditEntry(result.auditEntry);
-      } catch {
+      } catch (err) {
+        console.error("[forceAllocate] negotiation round failed:", err);
         set((s) => ({
           patients: s.patients.map((p) =>
             p.id === patientId ? { ...p, status: "WAITING" as const } : p
@@ -406,7 +407,8 @@ export const useSimulationStore = create<SimulationStore>()(
         }));
         persistDecision(result.decision);
         persistAuditEntry(result.auditEntry);
-      } catch {
+      } catch (err) {
+        console.error("[forceAllocateToHospital] negotiation round failed:", err);
         set((s) => ({
           patients: s.patients.map((p) =>
             p.id === patientId ? { ...p, status: "WAITING" as const } : p

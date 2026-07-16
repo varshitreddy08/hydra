@@ -311,7 +311,7 @@ export async function runNegotiationRound(
   const eligibleResources = resources.filter(
     (r) =>
       patient.requiresResourceTypes.includes(r.type) &&
-      (r.status === "AVAILABLE" || r.status === "RESERVED")
+      r.status === "AVAILABLE"
   );
 
   for (const resource of eligibleResources) {
