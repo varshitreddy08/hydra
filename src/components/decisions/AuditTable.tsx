@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { useSimulationStore } from "@/lib/store/simulationStore";
 import { ReasoningTree } from "@/components/decisions/ReasoningTree";
@@ -71,9 +71,8 @@ export function AuditTable() {
                 pageDecisions.map((decision) => {
                   const isExpanded = expandedId === decision.id;
                   return (
-                    <>
+                    <Fragment key={decision.id}>
                       <tr
-                        key={decision.id}
                         className={cn(
                           "cursor-pointer border-b border-[#1e2d4a]/60 transition-colors hover:bg-white/5",
                           isExpanded && "bg-white/5"
@@ -133,7 +132,7 @@ export function AuditTable() {
                         </td>
                       </tr>
                       {isExpanded && (
-                        <tr key={`${decision.id}-expanded`} className="bg-[#080c18]">
+                        <tr className="bg-[#080c18]">
                           <td colSpan={8} className="px-4 py-4">
                             <div className="max-w-2xl">
                               <ReasoningTree
@@ -144,7 +143,7 @@ export function AuditTable() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })
               )}

@@ -4,7 +4,7 @@ import { useState, useId } from "react";
 import { X, UserPlus } from "lucide-react";
 import { useSimulationStore } from "@/lib/store/simulationStore";
 import { cn } from "@/lib/utils/cn";
-import type { ClinicalCondition } from "@/types";
+import type { ClinicalCondition, ResourceType } from "@/types";
 
 interface AdmitPatientDialogProps {
   open: boolean;
@@ -23,6 +23,30 @@ const CONDITIONS: ClinicalCondition[] = [
   "ANAPHYLAXIS",
   "OVERDOSE",
 ];
+
+const CONDITION_RESOURCES: Record<ClinicalCondition, { types: ResourceType[]; caps: string[] }> = {
+  CARDIAC_ARREST:      { types: ["EMERGENCY_BAY", "DEFIBRILLATOR", "CARDIOLOGIST"],          caps: ["cardiac", "resuscitation"] },
+  TRAUMA_MAJOR:        { types: ["OPERATING_ROOM", "TRAUMA_SURGEON", "ANESTHESIOLOGIST"],     caps: ["trauma"] },
+  STROKE_ISCHEMIC:     { types: ["CT_SCANNER", "ICU_BED"],                                    caps: ["neuro", "monitoring"] },
+  STROKE_HEMORRHAGIC:  { types: ["OPERATING_ROOM", "ICU_BED"],                                caps: ["neuro", "monitoring"] },
+  SEPSIS:              { types: ["ICU_BED", "NURSE_ICU"],                                      caps: ["sepsis", "monitoring"] },
+  RESPIRATORY_FAILURE: { types: ["ICU_BED", "VENTILATOR"],                                    caps: ["ventilation", "respiratory"] },
+  BURNS_MAJOR:         { types: ["OPERATING_ROOM", "ICU_BED"],                                caps: ["trauma", "monitoring"] },
+  POLYTRAUMA:          { types: ["OPERATING_ROOM", "TRAUMA_SURGEON", "ICU_BED"],              caps: ["trauma", "monitoring"] },
+  ANAPHYLAXIS:         { types: ["EMERGENCY_BAY", "NURSE_ED"],                                caps: ["resuscitation"] },
+  OVERDOSE:            { types: ["EMERGENCY_BAY", "NURSE_ED"],                                caps: ["general"] },
+};
+
+const MAX_DETAILS_LENGTH = 500;
+
+function sanitizeText(raw: string): string {
+  return raw
+    .replace(/[<>]/g, "")
+    .replace(/javascript:/gi, "")
+    .replace(/on\w+=/gi, "")
+    .slice(0, MAX_DETAILS_LENGTH)
+    .trim();
+}
 
 interface FormValues {
   age: string;
@@ -57,11 +81,14 @@ const DEFAULTS: FormValues = {
 };
 
 function generateMrn(): string {
-  return `MRN${Date.now().toString().slice(-7)}`;
+  const bytes = new Uint8Array(4);
+  crypto.getRandomValues(bytes);
+  const n = new DataView(bytes.buffer).getUint32(0) % 100000;
+  return `MRN-${String(n).padStart(5, "0")}`;
 }
 
 function generateId(): string {
-  return `pat_${Math.random().toString(36).slice(2, 11)}`;
+  return `pat_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
 }
 
 function validate(values: FormValues): FormErrors {
@@ -72,6 +99,9 @@ function validate(values: FormValues): FormErrors {
   }
   if (!values.conditionDetails.trim()) {
     errors.conditionDetails = "Required";
+  }
+  if (values.conditionDetails.length > MAX_DETAILS_LENGTH) {
+    errors.conditionDetails = `Max ${MAX_DETAILS_LENGTH} characters`;
   }
   const hr = Number(values.heartRate);
   if (isNaN(hr) || hr < 20 || hr > 300) errors.heartRate = "20–300 bpm";
@@ -119,13 +149,15 @@ export function AdmitPatientDialog({ open, onClose }: AdmitPatientDialogProps) {
     }
     setSubmitting(true);
     const now = Date.now();
+    const { types: requiresResourceTypes, caps: requiredCapabilities } =
+      CONDITION_RESOURCES[values.condition];
     admitPatient({
       id: generateId(),
       mrn: generateMrn(),
       age: Number(values.age),
       sex: values.sex,
       condition: values.condition,
-      conditionDetails: values.conditionDetails.trim(),
+      conditionDetails: sanitizeText(values.conditionDetails),
       vitals: {
         heartRate: Number(values.heartRate),
         systolicBP: Number(values.systolicBP),
@@ -137,9 +169,9 @@ export function AdmitPatientDialog({ open, onClose }: AdmitPatientDialogProps) {
         timestamp: now,
       },
       arrivedAt: now,
-      requiresResourceTypes: [],
-      requiredCapabilities: [],
-      estimatedTreatmentDuration: 3600000,
+      requiresResourceTypes,
+      requiredCapabilities,
+      estimatedTreatmentDuration: (60 + Math.floor(Math.random() * 240)) * 60000,
     });
     setValues(DEFAULTS);
     setErrors({});
@@ -224,6 +256,7 @@ export function AdmitPatientDialog({ open, onClose }: AdmitPatientDialogProps) {
                   value={values.conditionDetails}
                   onChange={(e) => handleChange("conditionDetails", e.target.value)}
                   rows={2}
+                  maxLength={MAX_DETAILS_LENGTH}
                   placeholder="Describe presenting symptoms..."
                   className={cn(inputCls(!!errors.conditionDetails), "resize-none")}
                 />

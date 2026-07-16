@@ -5,6 +5,10 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Activity, Lock, Mail, AlertCircle } from "lucide-react";
 
+// Simple client-side rate limiting — prevents rapid resubmission
+let lastAttemptAt = 0;
+const MIN_ATTEMPT_GAP_MS = 2000;
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,12 +19,19 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    // Basic validation
-    if (!email.trim() || !password.trim()) {
+    const now = Date.now();
+    if (now - lastAttemptAt < MIN_ATTEMPT_GAP_MS) return;
+    lastAttemptAt = now;
+
+    // Strict input validation
+    const cleanEmail = email.trim().toLowerCase().slice(0, 254);
+    const cleanPassword = password.slice(0, 128);
+
+    if (!cleanEmail || !cleanPassword) {
       setError("Email and password are required");
       return;
     }
-    if (!email.includes("@")) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       setError("Invalid email address");
       return;
     }
@@ -31,11 +42,12 @@ export default function LoginPage() {
     try {
       const supabase = createClient();
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
+        email: cleanEmail,
+        password: cleanPassword,
       });
 
       if (authError) {
+        // Generic message — don't reveal whether email or password is wrong
         setError("Invalid credentials. Please try again.");
         return;
       }
