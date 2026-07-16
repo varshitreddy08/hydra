@@ -34,11 +34,23 @@ create table if not exists public.audit_log (
   timestamp timestamptz not null default now()
 );
 
+-- 4. Hospitals table
+create table if not exists public.hospitals (
+  id text primary key,
+  name text not null,
+  address text not null default '',
+  phone text not null default '',
+  lat numeric,
+  lng numeric,
+  created_at timestamptz not null default now()
+);
+
 -- ─── Row Level Security ──────────────────────────────────────────────────────
 
 alter table public.profiles enable row level security;
 alter table public.decisions enable row level security;
 alter table public.audit_log enable row level security;
+alter table public.hospitals enable row level security;
 
 -- Profiles: users can only see their own profile
 create policy "Users can view own profile"
@@ -74,6 +86,27 @@ create policy "Authenticated users can insert audit log"
   on public.audit_log for insert
   to authenticated
   with check (true);
+
+-- Hospitals: all authenticated users can read/write
+create policy "Authenticated users can read hospitals"
+  on public.hospitals for select
+  to authenticated
+  using (true);
+
+create policy "Authenticated users can insert hospitals"
+  on public.hospitals for insert
+  to authenticated
+  with check (true);
+
+create policy "Authenticated users can update hospitals"
+  on public.hospitals for update
+  to authenticated
+  using (true);
+
+create policy "Authenticated users can delete hospitals"
+  on public.hospitals for delete
+  to authenticated
+  using (true);
 
 -- ─── Enable Realtime ─────────────────────────────────────────────────────────
 

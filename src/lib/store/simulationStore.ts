@@ -81,6 +81,7 @@ interface SimulationStore {
     >
   ) => void;
   addHospital: (hospital: Omit<Hospital, "id" | "createdAt">) => void;
+  loadHospitalsFromDB: () => Promise<void>;
   addResource: (resource: Omit<Resource, "id" | "utilizationHistory" | "currentPatientId" | "createdAt" | "updatedAt">) => ResourceAgent;
   updateResource: (id: string, patch: Partial<Pick<Resource, "name" | "location" | "status" | "capabilities">>) => void;
   discardPatient: (patientId: string) => void;
@@ -193,6 +194,46 @@ export const useSimulationStore = create<SimulationStore>()(
         createdAt: Date.now(),
       };
       set((state) => ({ hospitals: [...state.hospitals, hospital] }));
+      // Persist to Supabase
+      (async () => {
+        try {
+          const supabase = createClient();
+          await supabase.from("hospitals").upsert({
+            id: hospital.id,
+            name: hospital.name,
+            address: hospital.address,
+            phone: hospital.phone,
+            lat: hospital.lat ?? null,
+            lng: hospital.lng ?? null,
+            created_at: new Date(hospital.createdAt).toISOString(),
+          });
+        } catch {
+          // Non-critical — hospital still lives in local store
+        }
+      })();
+    },
+
+    loadHospitalsFromDB: async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("hospitals")
+          .select("*")
+          .order("created_at", { ascending: true });
+        if (error || !data || data.length === 0) return;
+        const loaded: Hospital[] = data.map((row) => ({
+          id: row.id,
+          name: row.name,
+          address: row.address ?? "",
+          phone: row.phone ?? "",
+          lat: row.lat ?? undefined,
+          lng: row.lng ?? undefined,
+          createdAt: new Date(row.created_at).getTime(),
+        }));
+        set({ hospitals: loaded });
+      } catch {
+        // Fall back to seed data already in store
+      }
     },
 
     addResource: (resourceData) => {

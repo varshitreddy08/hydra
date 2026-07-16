@@ -27,7 +27,9 @@
       "Bash(git commit -m 'fix: remove real credentials from example file, replace with placeholders *)",
       "Bash(git branch *)",
       "Bash(git commit *)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(Get-ChildItem -Recurse -Directory -Depth 2)",
+      "Bash(Select-Object FullName)"
     ]
   }
 }
