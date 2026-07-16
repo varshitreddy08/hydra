@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { Activity, Lock, Mail, AlertCircle } from "lucide-react";
+import Link from "next/link";
+import { Activity, Lock, Mail, AlertCircle, Building2 } from "lucide-react";
 
 // Simple client-side rate limiting — prevents rapid resubmission
 let lastAttemptAt = 0;
@@ -57,7 +58,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/dashboard");
+      router.push("/");
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -181,10 +182,17 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-[#1e2d4a]">
+          <div className="mt-6 pt-6 border-t border-[#1e2d4a] space-y-3">
             <p className="text-xs text-slate-500 text-center">
-              Demo credentials — see README for setup instructions
+              Operations & Admin access only
             </p>
+            <Link
+              href="/hospital-login"
+              className="flex items-center justify-center gap-2 w-full py-2.5 border border-[#1e2d4a] hover:border-blue-500/40 hover:bg-blue-500/5 text-slate-400 hover:text-blue-300 rounded-lg text-xs font-medium transition-colors"
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              Hospital Staff? Sign in here
+            </Link>
           </div>
         </div>
       </div>

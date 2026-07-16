@@ -27,7 +27,8 @@ export async function middleware(request: NextRequest) {
   const isRateLimitedRoute =
     pathname.startsWith("/api/") ||
     pathname.startsWith("/auth/") ||
-    pathname === "/login";
+    pathname === "/login" ||
+    pathname === "/hospital-login";
 
   if (isRateLimitedRoute) {
     const forwardedFor = request.headers.get("x-forwarded-for");
@@ -87,17 +88,21 @@ export async function middleware(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const isAuthPage = pathname.startsWith("/login");
+    const isAuthPage =
+      pathname.startsWith("/login") || pathname.startsWith("/hospital-login");
 
     if (!user && !isAuthPage) {
       const url = request.nextUrl.clone();
-      url.pathname = "/login";
+      // Redirect hospital-portal visitors to the hospital login page
+      url.pathname = pathname.startsWith("/hospital-portal")
+        ? "/hospital-login"
+        : "/login";
       return NextResponse.redirect(url);
     }
 
     if (user && isAuthPage) {
       const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
+      url.pathname = "/";
       return NextResponse.redirect(url);
     }
   } catch {

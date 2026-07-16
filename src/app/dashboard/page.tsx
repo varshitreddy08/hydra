@@ -5,6 +5,7 @@ import { KPICards } from "@/components/dashboard/KPICards";
 import { ResourceStatusGrid } from "@/components/dashboard/ResourceStatusGrid";
 import { SystemHealthBar } from "@/components/dashboard/SystemHealthBar";
 import { ActiveNegotiationPanel } from "@/components/dashboard/ActiveNegotiationPanel";
+import { HospitalStaffPanel } from "@/components/dashboard/HospitalStaffPanel";
 
 export default function DashboardPage() {
   const { status, patients, decisions } = useSimulationStore();
@@ -119,6 +120,9 @@ export default function DashboardPage() {
           </p>
         </div>
       )}
+
+      {/* ── Hospital Staff Management ── */}
+      <HospitalStaffPanel />
     </div>
   );
 }

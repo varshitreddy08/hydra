@@ -24,11 +24,16 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse and validate body
     const body = await request.json();
-    const { email, password, role, fullName } = body as {
+    const { email, password, role, fullName, hospitalId, hospitalData } = body as {
       email: string;
       password: string;
-      role: "admin" | "viewer";
+      role: "admin" | "viewer" | "hospital_member";
       fullName: string;
+      hospitalId?: string;
+      hospitalData?: {
+        id: string; name: string; address: string; phone: string;
+        lat?: number | null; lng?: number | null; createdAt: number;
+      } | null;
     };
 
     if (!email || !password || !role) {
@@ -44,8 +49,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Password must be 8–128 characters" }, { status: 400 });
     }
 
-    if (!["admin", "viewer"].includes(role)) {
-      return NextResponse.json({ error: "Role must be admin or viewer" }, { status: 400 });
+    if (!["admin", "viewer", "hospital_member"].includes(role)) {
+      return NextResponse.json({ error: "Role must be admin, viewer, or hospital_member" }, { status: 400 });
+    }
+
+    if (role === "hospital_member" && !hospitalId) {
+      return NextResponse.json({ error: "hospitalId is required for hospital_member role" }, { status: 400 });
     }
 
     // 3. Create user via service role (bypasses email confirmation)
@@ -64,7 +73,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: createError.message }, { status: 400 });
     }
 
-    // 4. Upsert profile with correct role (trigger may have set it to viewer)
+    // 4. Upsert the hospital first so the FK constraint on profiles.hospital_id passes
+    if (role === "hospital_member" && hospitalId && hospitalData) {
+      await adminClient.from("hospitals").upsert({
+        id: hospitalData.id,
+        name: hospitalData.name,
+        address: hospitalData.address ?? "",
+        phone: hospitalData.phone ?? "",
+        lat: hospitalData.lat ?? null,
+        lng: hospitalData.lng ?? null,
+        created_at: new Date(hospitalData.createdAt).toISOString(),
+      }, { onConflict: "id" });
+    }
+
+    // 5. Upsert profile with correct role (trigger may have set it to viewer)
     if (newUser.user) {
       await adminClient
         .from("profiles")
@@ -72,6 +94,7 @@ export async function POST(request: NextRequest) {
           id: newUser.user.id,
           role,
           full_name: fullName?.trim() || email,
+          hospital_id: role === "hospital_member" ? (hospitalId ?? null) : null,
         });
     }
 

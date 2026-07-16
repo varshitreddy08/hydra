@@ -85,6 +85,7 @@ interface SimulationStore {
   addResource: (resource: Omit<Resource, "id" | "utilizationHistory" | "currentPatientId" | "createdAt" | "updatedAt">) => ResourceAgent;
   updateResource: (id: string, patch: Partial<Pick<Resource, "name" | "location" | "status" | "capabilities">>) => void;
   discardPatient: (patientId: string) => void;
+  addReferral: (patientId: string, hospitalIds: string[]) => void;
   forceAllocate: (patientId: string) => Promise<void>;
   forceAllocateToHospital: (patientId: string, hospitalId: string) => Promise<void>;
   tick_: () => Promise<void>;
@@ -287,6 +288,14 @@ export const useSimulationStore = create<SimulationStore>()(
                     : a.state,
               }
             : a
+        ),
+      }));
+    },
+
+    addReferral: (patientId, hospitalIds) => {
+      set((state) => ({
+        patients: state.patients.map((p) =>
+          p.id === patientId ? { ...p, referredHospitalIds: hospitalIds } : p
         ),
       }));
     },

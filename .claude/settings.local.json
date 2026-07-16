@@ -29,7 +29,13 @@
       "Bash(git commit *)",
       "Bash(npx next *)",
       "Bash(Get-ChildItem -Recurse -Directory -Depth 2)",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(git rm *)",
+      "Bash(Select-Object Name, FullName)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Varshit's Workspace\\\\hackathon\" -Force | Select-Object Name, @{Name='Type';Expression={if\\($_.PSIsContainer\\){'Dir'}else{'File'}}} | Format-Table -AutoSize)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Varshit's Workspace\\\\hackathon\\\\src\\\\components\" -Recurse -Include \"*.tsx\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)"
     ]
   }
 }

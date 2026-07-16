@@ -127,6 +127,8 @@ export interface Patient {
   treatmentStartedAt: number | null;
   dischargedAt: number | null;
   estimatedTreatmentDuration: number;
+  referredHospitalIds?: string[];
+  admittedByHospitalId?: string;
 }
 
 // ─── Agent Types ─────────────────────────────────────────────────────────────
