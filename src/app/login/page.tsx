@@ -47,15 +47,27 @@ export default function LoginPage() {
       });
 
       if (authError) {
-        // Generic message — don't reveal whether email or password is wrong
-        setError("Invalid credentials. Please try again.");
+        if (authError.message.toLowerCase().includes("invalid login")) {
+          setError("Invalid email or password.");
+        } else if (authError.message.toLowerCase().includes("email not confirmed")) {
+          setError("Please confirm your email address before signing in.");
+        } else {
+          setError(authError.message || "Sign-in failed. Please try again.");
+        }
         return;
       }
 
       router.push("/dashboard");
       router.refresh();
-    } catch {
-      setError("An unexpected error occurred. Please try again.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("fetch") || msg.includes("network") || msg.includes("Failed")) {
+        setError("Cannot reach the server. Check your internet connection.");
+      } else if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        setError("App not configured — Supabase environment variables are missing.");
+      } else {
+        setError(`Unexpected error: ${msg}`);
+      }
     } finally {
       setLoading(false);
     }
