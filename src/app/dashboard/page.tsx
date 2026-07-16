@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState } from "react";
 import { useSimulationStore } from "@/lib/store/simulationStore";
 import { KPICards } from "@/components/dashboard/KPICards";
 import { ResourceStatusGrid } from "@/components/dashboard/ResourceStatusGrid";
 import { SystemHealthBar } from "@/components/dashboard/SystemHealthBar";
 import { ActiveNegotiationPanel } from "@/components/dashboard/ActiveNegotiationPanel";
+import { CreateUserDialog } from "@/components/dashboard/CreateUserDialog";
+import { UserPlus } from "lucide-react";
 
 export default function DashboardPage() {
   const { status, patients, decisions } = useSimulationStore();
+  const [createUserOpen, setCreateUserOpen] = useState(false);
 
   const waitingCount = patients.filter((p) => p.status === "WAITING").length;
   const criticalCount = patients.filter(
@@ -37,8 +40,17 @@ export default function DashboardPage() {
               {waitingCount} in Queue
             </div>
           )}
+          <button
+            onClick={() => setCreateUserOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/10 border border-blue-500/30 text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-600/20 transition-colors"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Create User
+          </button>
         </div>
       </div>
+
+      <CreateUserDialog open={createUserOpen} onClose={() => setCreateUserOpen(false)} />
 
       {/* System health bar */}
       <SystemHealthBar />
