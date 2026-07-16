@@ -5,6 +5,7 @@ import { X, UserPlus } from "lucide-react";
 import { useSimulationStore } from "@/lib/store/simulationStore";
 import { cn } from "@/lib/utils/cn";
 import type { ClinicalCondition, ResourceType } from "@/types";
+import { HospitalMapSuggestion } from "./HospitalMapSuggestion";
 
 interface AdmitPatientDialogProps {
   open: boolean;
@@ -179,6 +180,8 @@ export function AdmitPatientDialog({ open, onClose }: AdmitPatientDialogProps) {
     onClose();
   }
 
+  const requiredTypes = CONDITION_RESOURCES[values.condition]?.types ?? [];
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -192,164 +195,175 @@ export function AdmitPatientDialog({ open, onClose }: AdmitPatientDialogProps) {
         aria-hidden="true"
       />
 
-      {/* Card */}
-      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border border-[#1e2d4a] bg-[#0d1526] shadow-2xl">
-        <div className="flex items-center justify-between border-b border-[#1e2d4a] px-5 py-4">
-          <div className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-blue-400" />
-            <h2 className="text-base font-semibold text-white">Admit New Patient</h2>
+      {/* Card — wide 2-column layout */}
+      <div className="relative z-10 flex w-full max-w-4xl overflow-hidden rounded-2xl border border-[#1e2d4a] bg-[#0d1526] shadow-2xl" style={{ maxHeight: "90vh" }}>
+        {/* ── LEFT: Patient form ── */}
+        <div className="flex flex-col" style={{ width: "420px", flexShrink: 0 }}>
+          <div className="flex items-center justify-between border-b border-[#1e2d4a] px-5 py-4">
+            <div className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-blue-400" />
+              <h2 className="text-base font-semibold text-white">Admit New Patient</h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Close dialog"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-white/10 hover:text-white"
-            aria-label="Close dialog"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
 
-        <form id={formId} onSubmit={handleSubmit}>
-          <div className="max-h-[70vh] overflow-y-auto px-5 py-4">
-            <div className="flex flex-col gap-4">
-              {/* Demographics */}
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Age" error={errors.age}>
-                  <input
-                    type="number"
-                    min={0}
-                    max={130}
-                    value={values.age}
-                    onChange={(e) => handleChange("age", e.target.value)}
-                    placeholder="0–130"
-                    className={inputCls(!!errors.age)}
-                  />
-                </Field>
-                <Field label="Sex" error={errors.sex}>
+          <form id={formId} onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="overflow-y-auto px-5 py-4 flex-1">
+              <div className="flex flex-col gap-4">
+                {/* Demographics */}
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Age" error={errors.age}>
+                    <input
+                      type="number"
+                      min={0}
+                      max={130}
+                      value={values.age}
+                      onChange={(e) => handleChange("age", e.target.value)}
+                      placeholder="0–130"
+                      className={inputCls(!!errors.age)}
+                    />
+                  </Field>
+                  <Field label="Sex" error={errors.sex}>
+                    <select
+                      value={values.sex}
+                      onChange={(e) => handleChange("sex", e.target.value as "M" | "F" | "OTHER")}
+                      className={inputCls(false)}
+                    >
+                      <option value="M">Male</option>
+                      <option value="F">Female</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                  </Field>
+                </div>
+
+                <Field label="Condition" error={errors.condition}>
                   <select
-                    value={values.sex}
-                    onChange={(e) => handleChange("sex", e.target.value as "M" | "F" | "OTHER")}
+                    value={values.condition}
+                    onChange={(e) => handleChange("condition", e.target.value as ClinicalCondition)}
                     className={inputCls(false)}
                   >
-                    <option value="M">Male</option>
-                    <option value="F">Female</option>
-                    <option value="OTHER">Other</option>
+                    {CONDITIONS.map((c) => (
+                      <option key={c} value={c}>
+                        {c.replace(/_/g, " ")}
+                      </option>
+                    ))}
                   </select>
                 </Field>
-              </div>
 
-              <Field label="Condition" error={errors.condition}>
-                <select
-                  value={values.condition}
-                  onChange={(e) => handleChange("condition", e.target.value as ClinicalCondition)}
-                  className={inputCls(false)}
-                >
-                  {CONDITIONS.map((c) => (
-                    <option key={c} value={c}>
-                      {c.replace(/_/g, " ")}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+                <Field label="Condition Details" error={errors.conditionDetails}>
+                  <textarea
+                    value={values.conditionDetails}
+                    onChange={(e) => handleChange("conditionDetails", e.target.value)}
+                    rows={2}
+                    maxLength={MAX_DETAILS_LENGTH}
+                    placeholder="Describe presenting symptoms..."
+                    className={cn(inputCls(!!errors.conditionDetails), "resize-none")}
+                  />
+                </Field>
 
-              <Field label="Condition Details" error={errors.conditionDetails}>
-                <textarea
-                  value={values.conditionDetails}
-                  onChange={(e) => handleChange("conditionDetails", e.target.value)}
-                  rows={2}
-                  maxLength={MAX_DETAILS_LENGTH}
-                  placeholder="Describe presenting symptoms..."
-                  className={cn(inputCls(!!errors.conditionDetails), "resize-none")}
-                />
-              </Field>
-
-              {/* Vitals */}
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Vitals
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Heart Rate (bpm)" error={errors.heartRate}>
-                    <input
-                      type="number"
-                      value={values.heartRate}
-                      onChange={(e) => handleChange("heartRate", e.target.value)}
-                      className={inputCls(!!errors.heartRate)}
-                    />
-                  </Field>
-                  <Field label="Systolic BP (mmHg)" error={errors.systolicBP}>
-                    <input
-                      type="number"
-                      value={values.systolicBP}
-                      onChange={(e) => handleChange("systolicBP", e.target.value)}
-                      className={inputCls(!!errors.systolicBP)}
-                    />
-                  </Field>
-                  <Field label="Diastolic BP (mmHg)" error={errors.diastolicBP}>
-                    <input
-                      type="number"
-                      value={values.diastolicBP}
-                      onChange={(e) => handleChange("diastolicBP", e.target.value)}
-                      className={inputCls(!!errors.diastolicBP)}
-                    />
-                  </Field>
-                  <Field label="Resp. Rate (/min)" error={errors.respiratoryRate}>
-                    <input
-                      type="number"
-                      value={values.respiratoryRate}
-                      onChange={(e) => handleChange("respiratoryRate", e.target.value)}
-                      className={inputCls(!!errors.respiratoryRate)}
-                    />
-                  </Field>
-                  <Field label="SpO₂ (%)" error={errors.oxygenSaturation}>
-                    <input
-                      type="number"
-                      value={values.oxygenSaturation}
-                      onChange={(e) => handleChange("oxygenSaturation", e.target.value)}
-                      className={inputCls(!!errors.oxygenSaturation)}
-                    />
-                  </Field>
-                  <Field label="Temperature (°C)" error={errors.temperature}>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={values.temperature}
-                      onChange={(e) => handleChange("temperature", e.target.value)}
-                      className={inputCls(!!errors.temperature)}
-                    />
-                  </Field>
-                  <Field label="GCS (3–15)" error={errors.consciousnessScore} className="col-span-2">
-                    <input
-                      type="number"
-                      min={3}
-                      max={15}
-                      value={values.consciousnessScore}
-                      onChange={(e) => handleChange("consciousnessScore", e.target.value)}
-                      className={inputCls(!!errors.consciousnessScore)}
-                    />
-                  </Field>
+                {/* Vitals */}
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Vitals
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Heart Rate (bpm)" error={errors.heartRate}>
+                      <input
+                        type="number"
+                        value={values.heartRate}
+                        onChange={(e) => handleChange("heartRate", e.target.value)}
+                        className={inputCls(!!errors.heartRate)}
+                      />
+                    </Field>
+                    <Field label="Systolic BP (mmHg)" error={errors.systolicBP}>
+                      <input
+                        type="number"
+                        value={values.systolicBP}
+                        onChange={(e) => handleChange("systolicBP", e.target.value)}
+                        className={inputCls(!!errors.systolicBP)}
+                      />
+                    </Field>
+                    <Field label="Diastolic BP (mmHg)" error={errors.diastolicBP}>
+                      <input
+                        type="number"
+                        value={values.diastolicBP}
+                        onChange={(e) => handleChange("diastolicBP", e.target.value)}
+                        className={inputCls(!!errors.diastolicBP)}
+                      />
+                    </Field>
+                    <Field label="Resp. Rate (/min)" error={errors.respiratoryRate}>
+                      <input
+                        type="number"
+                        value={values.respiratoryRate}
+                        onChange={(e) => handleChange("respiratoryRate", e.target.value)}
+                        className={inputCls(!!errors.respiratoryRate)}
+                      />
+                    </Field>
+                    <Field label="SpO₂ (%)" error={errors.oxygenSaturation}>
+                      <input
+                        type="number"
+                        value={values.oxygenSaturation}
+                        onChange={(e) => handleChange("oxygenSaturation", e.target.value)}
+                        className={inputCls(!!errors.oxygenSaturation)}
+                      />
+                    </Field>
+                    <Field label="Temperature (°C)" error={errors.temperature}>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={values.temperature}
+                        onChange={(e) => handleChange("temperature", e.target.value)}
+                        className={inputCls(!!errors.temperature)}
+                      />
+                    </Field>
+                    <Field label="GCS (3–15)" error={errors.consciousnessScore} className="col-span-2">
+                      <input
+                        type="number"
+                        min={3}
+                        max={15}
+                        value={values.consciousnessScore}
+                        onChange={(e) => handleChange("consciousnessScore", e.target.value)}
+                        className={inputCls(!!errors.consciousnessScore)}
+                      />
+                    </Field>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-[#1e2d4a] px-5 py-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
-            >
-              <UserPlus className="h-4 w-4" />
-              Admit Patient
-            </button>
-          </div>
-        </form>
+            <div className="flex items-center justify-end gap-2 border-t border-[#1e2d4a] px-5 py-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg px-4 py-2 text-sm text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+              >
+                <UserPlus className="h-4 w-4" />
+                Admit Patient
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* ── RIGHT: Hospital map suggestions ── */}
+        <div className="flex flex-col flex-1 border-l border-[#1e2d4a] overflow-y-auto p-4 bg-[#080c18]">
+          <HospitalMapSuggestion
+            condition={values.condition}
+            requiredTypes={requiredTypes as ResourceType[]}
+          />
+        </div>
       </div>
     </div>
   );

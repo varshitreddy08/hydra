@@ -1,11 +1,29 @@
-import type { Resource, Patient, ResourceAgent } from "@/types";
+import type { Resource, Patient, ResourceAgent, Hospital } from "@/types";
 import { computeTriageScore } from "./engine";
+
+export const DEFAULT_HOSPITAL_ID = "hospital-1";
+
+export function seedHospitals(): Hospital[] {
+  const now = Date.now();
+  return [
+    {
+      id: DEFAULT_HOSPITAL_ID,
+      name: "City General Hospital",
+      address: "123 Medical Center Drive, Downtown",
+      phone: "+1 (555) 100-2000",
+      lat: 40.7589,
+      lng: -73.9851,
+      createdAt: now,
+    },
+  ];
+}
 
 export function seedResources(): Resource[] {
   const now = Date.now();
   return [
     {
       id: "or-1",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "OPERATING_ROOM",
       name: "OR-1",
       status: "AVAILABLE",
@@ -18,6 +36,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "or-2",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "OPERATING_ROOM",
       name: "OR-2",
       status: "AVAILABLE",
@@ -30,6 +49,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "or-3",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "OPERATING_ROOM",
       name: "OR-3",
       status: "MAINTENANCE",
@@ -42,6 +62,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "icu-1",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "ICU_BED",
       name: "ICU Bed 1A",
       status: "AVAILABLE",
@@ -54,6 +75,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "icu-2",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "ICU_BED",
       name: "ICU Bed 2A",
       status: "AVAILABLE",
@@ -66,6 +88,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "icu-3",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "ICU_BED",
       name: "ICU Bed 3B",
       status: "OCCUPIED",
@@ -78,6 +101,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "eb-1",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "EMERGENCY_BAY",
       name: "Emergency Bay 1",
       status: "AVAILABLE",
@@ -90,6 +114,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "eb-2",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "EMERGENCY_BAY",
       name: "Emergency Bay 2",
       status: "AVAILABLE",
@@ -102,6 +127,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "vent-1",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "VENTILATOR",
       name: "Ventilator A",
       status: "AVAILABLE",
@@ -114,6 +140,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "vent-2",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "VENTILATOR",
       name: "Ventilator B",
       status: "AVAILABLE",
@@ -126,6 +153,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "ct-1",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "CT_SCANNER",
       name: "CT Scanner 1",
       status: "AVAILABLE",
@@ -138,6 +166,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "surgeon-1",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "SURGEON",
       name: "Dr. Chen (Trauma)",
       status: "AVAILABLE",
@@ -150,6 +179,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "surgeon-2",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "SURGEON",
       name: "Dr. Patel (Cardiac)",
       status: "AVAILABLE",
@@ -162,6 +192,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "anesthesia-1",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "ANESTHESIOLOGIST",
       name: "Dr. Kim (Anesthesia)",
       status: "AVAILABLE",
@@ -174,6 +205,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "nurse-icu-1",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "NURSE_ICU",
       name: "RN Sarah (ICU)",
       status: "AVAILABLE",
@@ -186,6 +218,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "nurse-icu-2",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "NURSE_ICU",
       name: "RN James (ICU)",
       status: "AVAILABLE",
@@ -198,6 +231,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "nurse-ed-1",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "NURSE_ED",
       name: "RN Maria (ED)",
       status: "AVAILABLE",
@@ -210,6 +244,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "cardiologist-1",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "CARDIOLOGIST",
       name: "Dr. Okonkwo (Cardiology)",
       status: "AVAILABLE",
@@ -222,6 +257,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "trauma-surgeon-1",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "TRAUMA_SURGEON",
       name: "Dr. Reyes (Trauma Surgery)",
       status: "AVAILABLE",
@@ -234,6 +270,7 @@ export function seedResources(): Resource[] {
     },
     {
       id: "defib-1",
+      hospitalId: DEFAULT_HOSPITAL_ID,
       type: "DEFIBRILLATOR",
       name: "Defibrillator 1",
       status: "AVAILABLE",

@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
-import { statusColor, statusDotColor } from "@/lib/utils/formatters";
+import { statusColor } from "@/lib/utils/formatters";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { AgentStateBadge } from "@/components/shared/AgentStateBadge";
+import { EditResourceDialog } from "@/components/resources/EditResourceDialog";
 import type { Resource, ResourceAgent } from "@/types";
 import {
   Bed,
@@ -18,6 +20,7 @@ import {
   User,
   Shield,
   FlaskConical,
+  Pencil,
 } from "lucide-react";
 import type { ResourceType } from "@/types";
 
@@ -79,6 +82,7 @@ function UtilizationSparkline({ history }: { history: number[] }) {
 }
 
 export function ResourceAgentCard({ resource, agent }: ResourceAgentCardProps) {
+  const [editOpen, setEditOpen] = useState(false);
   const icon = RESOURCE_ICONS[resource.type] ?? <FlaskConical className="h-5 w-5" />;
 
   const allocationRate =
@@ -90,6 +94,7 @@ export function ResourceAgentCard({ resource, agent }: ResourceAgentCardProps) {
       : "0";
 
   return (
+    <>
     <div className="flex flex-col gap-3 rounded-xl border border-[#1e2d4a] bg-[#111b2e] p-4 transition-all hover:border-[#2a3f5f]">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
@@ -100,11 +105,20 @@ export function ResourceAgentCard({ resource, agent }: ResourceAgentCardProps) {
             <p className="text-xs text-gray-500">{resource.location}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <StatusDot status={resource.status} />
-          <span className={cn("text-xs font-medium", statusColor(resource.status))}>
-            {resource.status}
-          </span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <StatusDot status={resource.status} />
+            <span className={cn("text-xs font-medium", statusColor(resource.status))}>
+              {resource.status}
+            </span>
+          </div>
+          <button
+            onClick={() => setEditOpen(true)}
+            className="rounded-lg p-1 text-slate-600 hover:bg-white/10 hover:text-slate-300 transition-colors"
+            title="Edit resource"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 
@@ -156,5 +170,12 @@ export function ResourceAgentCard({ resource, agent }: ResourceAgentCardProps) {
         <UtilizationSparkline history={resource.utilizationHistory} />
       </div>
     </div>
+
+    <EditResourceDialog
+      resource={resource}
+      open={editOpen}
+      onClose={() => setEditOpen(false)}
+    />
+    </>
   );
 }

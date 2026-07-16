@@ -1,3 +1,15 @@
+// ─── Hospital Types ──────────────────────────────────────────────────────────
+
+export interface Hospital {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  lat?: number;
+  lng?: number;
+  createdAt: number;
+}
+
 // ─── Resource Types ──────────────────────────────────────────────────────────
 
 export type ResourceType =
@@ -24,6 +36,7 @@ export type ResourceStatus =
 
 export interface Resource {
   id: string;
+  hospitalId: string;
   type: ResourceType;
   name: string;
   status: ResourceStatus;

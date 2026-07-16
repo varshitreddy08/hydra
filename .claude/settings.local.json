@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Varshit's Workspace\\\\hackathon\" -Force)",
+      "Bash(Select-Object Mode, Name)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(npm info *)",
+      "Bash(python *)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-git --yes)",
+      "Bash(npm install *)",
+      "Bash(node -e \"const p = require\\('./node_modules/next-auth/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(npm uninstall *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(Start-Process -NoNewWindow powershell -ArgumentList \"-Command\", \"npm run dev\")",
+      "Bash(Start-Sleep 5)",
+      "Bash(Invoke-WebRequest -Uri \"http://localhost:3000\" -UseBasicParsing -TimeoutSec 10)",
+      "Bash(Select-Object -First 5)",
+      "Bash(git add *)",
+      "Bash(npm audit *)",
+      "Bash(git remote *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit -m 'feat: admin dashboard\")",
+      "Bash(git commit -m 'fix: remove real credentials from example file, replace with placeholders *)",
+      "Bash(git branch *)",
+      "Bash(git commit *)",
+      "Bash(npx next *)"
+    ]
+  }
+}
