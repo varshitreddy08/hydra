@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    if (!["admin", "super_admin"].includes(profile?.role ?? "")) {
+    const callerRole = profile?.role ?? "";
+    if (!["admin", "super_admin"].includes(callerRole)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -51,6 +52,11 @@ export async function POST(request: NextRequest) {
 
     if (!["super_admin", "admin", "viewer", "hospital_member"].includes(role)) {
       return NextResponse.json({ error: "Role must be super_admin, admin, viewer, or hospital_member" }, { status: 400 });
+    }
+
+    // Only super_admin can create other admin-level accounts
+    if (["admin", "super_admin"].includes(role) && callerRole !== "super_admin") {
+      return NextResponse.json({ error: "Only super admins can create admin accounts" }, { status: 403 });
     }
 
     if (role === "hospital_member" && !hospitalId) {

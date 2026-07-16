@@ -88,7 +88,7 @@ function AssignHospitalInline({
   );
 }
 
-export function HospitalStaffPanel() {
+export function HospitalStaffPanel({ canCreate = true }: { canCreate?: boolean }) {
   const { hospitals } = useSimulationStore();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
@@ -140,13 +140,15 @@ export function HospitalStaffPanel() {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
           </button>
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-300 rounded-lg text-xs font-medium hover:bg-emerald-600/30 transition-colors"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            Add Hospital Staff
-          </button>
+          {canCreate && (
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-300 rounded-lg text-xs font-medium hover:bg-emerald-600/30 transition-colors"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              Add Hospital Staff
+            </button>
+          )}
         </div>
       </div>
 
@@ -236,13 +238,15 @@ export function HospitalStaffPanel() {
         and are routed to the hospital portal automatically.
       </p>
 
-      <CreateHospitalMemberDialog
-        open={createOpen}
-        onClose={() => {
-          setCreateOpen(false);
-          fetchMembers();
-        }}
-      />
+      {canCreate && (
+        <CreateHospitalMemberDialog
+          open={createOpen}
+          onClose={() => {
+            setCreateOpen(false);
+            fetchMembers();
+          }}
+        />
+      )}
     </div>
   );
 }

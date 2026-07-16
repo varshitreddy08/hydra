@@ -14,6 +14,11 @@ import type {
   SimulationMetrics,
   UtilizationDataPoint,
   NegotiationOutcomeData,
+  Vitals,
+  TriageScore,
+  ClinicalCondition,
+  PatientStatus,
+  ResourceType,
 } from "@/types";
 import {
   runNegotiationRound,
@@ -77,6 +82,7 @@ interface SimulationStore {
   addResource: (resource: Omit<Resource, "id" | "utilizationHistory" | "currentPatientId" | "createdAt" | "updatedAt">) => ResourceAgent;
   updateResource: (id: string, patch: Partial<Pick<Resource, "name" | "location" | "status" | "capabilities">>) => void;
   loadResourcesFromDB: () => Promise<void>;
+  loadPatientsFromDB: () => Promise<void>;
   discardPatient: (patientId: string) => void;
   addReferral: (patientId: string, hospitalIds: string[]) => void;
   forceAllocate: (patientId: string) => Promise<void>;
@@ -125,6 +131,36 @@ async function persistResourceUpdates(resources: Resource[]) {
     if (error) console.error("[persistResourceUpdates] DB write failed:", error.message);
   } catch (err) {
     console.error("[persistResourceUpdates] unexpected error:", err);
+  }
+}
+
+async function persistPatientUpdate(patient: Patient) {
+  try {
+    const supabase = createClient();
+    await supabase.from("patients").upsert({
+      id: patient.id,
+      mrn: patient.mrn,
+      age: patient.age,
+      sex: patient.sex,
+      condition: patient.condition,
+      condition_details: patient.conditionDetails,
+      status: patient.status,
+      vitals: patient.vitals,
+      vitals_history: patient.vitalsHistory,
+      triage_score: patient.triageScore,
+      allocated_resources: patient.allocatedResources,
+      requires_resource_types: patient.requiresResourceTypes,
+      required_capabilities: patient.requiredCapabilities,
+      arrived_at: new Date(patient.arrivedAt).toISOString(),
+      treatment_started_at: patient.treatmentStartedAt ? new Date(patient.treatmentStartedAt).toISOString() : null,
+      discharged_at: patient.dischargedAt ? new Date(patient.dischargedAt).toISOString() : null,
+      estimated_treatment_duration: patient.estimatedTreatmentDuration,
+      referred_hospital_ids: patient.referredHospitalIds ?? [],
+      admitted_by_hospital_id: patient.admittedByHospitalId ?? null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "id" });
+  } catch (err) {
+    console.error("[persistPatientUpdate] error:", err);
   }
 }
 
@@ -370,6 +406,41 @@ export const useSimulationStore = create<SimulationStore>()(
       });
     },
 
+    loadPatientsFromDB: async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("patients")
+        .select("*")
+        .order("arrived_at", { ascending: false });
+      if (error) {
+        console.error("[Hydra] Failed to load patients from DB:", error.message);
+        return;
+      }
+      if (!data || data.length === 0) return;
+      const loaded: Patient[] = data.map((row) => ({
+        id: row.id,
+        mrn: row.mrn,
+        age: row.age,
+        sex: row.sex as "M" | "F" | "OTHER",
+        condition: row.condition as ClinicalCondition,
+        conditionDetails: row.condition_details ?? "",
+        status: row.status as PatientStatus,
+        vitals: row.vitals as Vitals,
+        vitalsHistory: (row.vitals_history ?? []) as Vitals[],
+        triageScore: row.triage_score as TriageScore,
+        allocatedResources: row.allocated_resources ?? [],
+        requiresResourceTypes: (row.requires_resource_types ?? []) as ResourceType[],
+        requiredCapabilities: row.required_capabilities ?? [],
+        arrivedAt: new Date(row.arrived_at).getTime(),
+        treatmentStartedAt: row.treatment_started_at ? new Date(row.treatment_started_at).getTime() : null,
+        dischargedAt: row.discharged_at ? new Date(row.discharged_at).getTime() : null,
+        estimatedTreatmentDuration: row.estimated_treatment_duration ?? 0,
+        referredHospitalIds: row.referred_hospital_ids ?? [],
+        admittedByHospitalId: row.admitted_by_hospital_id ?? undefined,
+      }));
+      set({ patients: loaded });
+    },
+
     addReferral: (patientId, hospitalIds) => {
       set((state) => ({
         patients: state.patients.map((p) =>
@@ -437,6 +508,7 @@ export const useSimulationStore = create<SimulationStore>()(
         persistDecision(result.decision);
         persistAuditEntry(result.auditEntry);
         persistResourceUpdates(result.updatedResources);
+        persistPatientUpdate(result.updatedPatient);
       } catch (err) {
         console.error("[forceAllocate] negotiation round failed:", err);
         set((s) => ({
@@ -487,6 +559,7 @@ export const useSimulationStore = create<SimulationStore>()(
         persistDecision(result.decision);
         persistAuditEntry(result.auditEntry);
         persistResourceUpdates(result.updatedResources);
+        persistPatientUpdate(result.updatedPatient);
       } catch (err) {
         console.error("[forceAllocateToHospital] negotiation round failed:", err);
         set((s) => ({
@@ -513,6 +586,7 @@ export const useSimulationStore = create<SimulationStore>()(
         dischargedAt: null,
       };
       set((state) => ({ patients: [...state.patients, newPatient] }));
+      persistPatientUpdate(newPatient);
     },
 
     tick_: async () => {
@@ -523,6 +597,11 @@ export const useSimulationStore = create<SimulationStore>()(
       // 1. Process discharges
       const { updatedPatients, updatedResources, updatedAgents } =
         processDischarges(state.patients, state.resources, state.agents);
+
+      // Persist any newly discharged patients
+      updatedPatients
+        .filter((p, i) => p.status === "DISCHARGED" && state.patients[i]?.status !== "DISCHARGED")
+        .forEach(persistPatientUpdate);
 
       // 2. Find highest-priority waiting patient
       const waitingPatients = updatedPatients
@@ -580,6 +659,7 @@ export const useSimulationStore = create<SimulationStore>()(
           persistDecision(result.decision);
           persistAuditEntry(result.auditEntry);
           persistResourceUpdates(result.updatedResources);
+          persistPatientUpdate(result.updatedPatient);
         } catch {
           // Reset patient status on error
           finalPatients = finalPatients.map((p) =>

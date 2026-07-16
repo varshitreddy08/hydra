@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-async function verifyAdmin() {
+async function verifySuperAdmin() {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) return null;
@@ -17,7 +17,7 @@ async function verifyAdmin() {
 // GET — list all hospital_member profiles with their hospital info
 export async function GET() {
   try {
-    const authed = await verifyAdmin();
+    const authed = await verifySuperAdmin();
     if (!authed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const adminClient = createAdminClient();
@@ -53,7 +53,7 @@ export async function GET() {
 // Accepts optional hospitalData so seeded (in-memory-only) hospitals get saved to Supabase first
 export async function PATCH(request: NextRequest) {
   try {
-    const authed = await verifyAdmin();
+    const authed = await verifySuperAdmin();
     if (!authed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await request.json() as {
