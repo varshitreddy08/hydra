@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -37,47 +37,76 @@ const PIN_ICON = L.divIcon({
   popupAnchor: [0, -46],
 });
 
+// Flies to new pin position when coords change
 function FlyTo({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
   useEffect(() => {
-    map.flyTo([lat, lng], 15, { duration: 1.2 });
+    map.flyTo([lat, lng], 15, { duration: 1 });
   }, [map, lat, lng]);
   return null;
 }
 
-interface LocationPickerMapProps {
-  lat: number;
-  lng: number;
-  onMove: (lat: number, lng: number) => void;
+// Handles map click → places / moves pin
+function MapClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onPick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
 }
 
-export default function LocationPickerMap({ lat, lng, onMove }: LocationPickerMapProps) {
+export interface LocationPickerMapProps {
+  lat?: number;
+  lng?: number;
+  onMove: (lat: number, lng: number) => void;
+  defaultCenter?: [number, number];
+  defaultZoom?: number;
+}
+
+export default function LocationPickerMap({
+  lat,
+  lng,
+  onMove,
+  defaultCenter = [20, 0],
+  defaultZoom = 2,
+}: LocationPickerMapProps) {
   const markerRef = useRef<L.Marker | null>(null);
+  const hasPin = lat !== undefined && lng !== undefined;
 
   return (
     <MapContainer
-      center={[lat, lng]}
-      zoom={15}
-      style={{ height: "100%", width: "100%" }}
+      center={hasPin ? [lat!, lng!] : defaultCenter}
+      zoom={hasPin ? 15 : defaultZoom}
+      style={{ height: "100%", width: "100%", cursor: "crosshair" }}
       zoomControl={true}
     >
       <TileLayer
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
       />
-      <Marker
-        position={[lat, lng]}
-        icon={PIN_ICON}
-        draggable={true}
-        ref={markerRef}
-        eventHandlers={{
-          dragend: () => {
-            const pos = markerRef.current?.getLatLng();
-            if (pos) onMove(pos.lat, pos.lng);
-          },
-        }}
-      />
-      <FlyTo lat={lat} lng={lng} />
+
+      {/* Click anywhere to pin */}
+      <MapClickHandler onPick={onMove} />
+
+      {/* Draggable pin — only when a position is set */}
+      {hasPin && (
+        <>
+          <Marker
+            position={[lat!, lng!]}
+            icon={PIN_ICON}
+            draggable
+            ref={markerRef}
+            eventHandlers={{
+              dragend: () => {
+                const pos = markerRef.current?.getLatLng();
+                if (pos) onMove(pos.lat, pos.lng);
+              },
+            }}
+          />
+          <FlyTo lat={lat!} lng={lng!} />
+        </>
+      )}
     </MapContainer>
   );
 }
