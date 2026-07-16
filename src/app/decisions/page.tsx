@@ -2,7 +2,7 @@
 
 import { useSimulationStore } from "@/lib/store/simulationStore";
 import { AuditTable } from "@/components/decisions/AuditTable";
-import { Download, ShieldCheck } from "lucide-react";
+import { Download } from "lucide-react";
 
 export default function DecisionsPage() {
   const { decisions, auditLog } = useSimulationStore();
@@ -94,12 +94,6 @@ export default function DecisionsPage() {
             <p className="text-2xl font-bold">{value}</p>
           </div>
         ))}
-      </div>
-
-      {/* Security notice */}
-      <div className="flex items-center gap-2 bg-blue-500/5 border border-blue-500/20 rounded-lg px-4 py-3 text-xs text-blue-300">
-        <ShieldCheck className="w-4 h-4 shrink-0 text-blue-400" />
-        All decisions are cryptographically hashed (SHA-256) to ensure integrity. Each hash uniquely identifies the decision payload and cannot be tampered with undetected.
       </div>
 
       {/* Audit table */}
