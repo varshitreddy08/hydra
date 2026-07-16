@@ -232,7 +232,12 @@ export const useSimulationStore = create<SimulationStore>()(
         lng: row.lng ?? undefined,
         createdAt: new Date(row.created_at).getTime(),
       }));
-      set({ hospitals: loaded });
+      // Merge: DB takes priority for matching IDs; seed hospitals not in DB are kept
+      set((state) => {
+        const dbIds = new Set(loaded.map((h) => h.id));
+        const seedsNotInDB = state.hospitals.filter((h) => !dbIds.has(h.id));
+        return { hospitals: [...seedsNotInDB, ...loaded] };
+      });
     },
 
     addResource: (resourceData) => {
