@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { AlertTriangle, Plus, X, ArrowLeft, Loader2, BedDouble, Wind, Scissors, Truck, Zap, ScanLine, Gauge, Droplets, Scan, HeartPulse } from "lucide-react";
+import { AlertTriangle, Plus, X, ArrowLeft, Loader2, BedDouble, Wind, Scissors, Truck, Zap, ScanLine, Gauge, Droplets, Scan, HeartPulse, Sparkles } from "lucide-react";
 import Link from "next/link";
 import type { ResourceType, Severity, BloodGroup } from "@/types";
 
@@ -33,6 +33,32 @@ export default function NewEmergencyPage() {
   const [clinicalNote,     setClinicalNote]     = useState("");
   const [loading,          setLoading]          = useState(false);
   const [error,            setError]            = useState<string | null>(null);
+  const [triageLoading,    setTriageLoading]    = useState(false);
+  const [triageReasoning,  setTriageReasoning]  = useState<string | null>(null);
+
+  async function runTriageAI() {
+    if (!clinicalNote.trim()) { setError("Write a triage note first so the AI can analyse it"); return; }
+    setTriageLoading(true);
+    setError(null);
+    setTriageReasoning(null);
+    try {
+      const res = await fetch("/api/ai/triage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clinicalNote }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Triage failed");
+      setSeverity(data.severity);
+      setSelectedResources(data.resources);
+      if (data.blood_group && data.blood_group !== "UNKNOWN") setBloodGroup(data.blood_group);
+      setTriageReasoning(data.reasoning);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI triage failed");
+    } finally {
+      setTriageLoading(false);
+    }
+  }
 
   function toggleResource(type: ResourceType) {
     setSelectedResources(prev =>
@@ -212,18 +238,37 @@ export default function NewEmergencyPage() {
 
         {/* Clinical note */}
         <div>
-          <label className="block text-sm font-semibold text-gray-800 mb-2">
-            Triage Note <span className="text-gray-400 font-normal">(brief, no PII)</span>
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-semibold text-gray-800">
+              Triage Note <span className="text-gray-400 font-normal">(brief, no PII)</span>
+            </label>
+            <button
+              type="button"
+              onClick={runTriageAI}
+              disabled={triageLoading || !clinicalNote.trim()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 border border-violet-200 text-violet-700 text-xs font-semibold hover:bg-violet-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {triageLoading
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Analysing…</>
+                : <><Sparkles className="w-3.5 h-3.5" />AI Triage</>
+              }
+            </button>
+          </div>
           <textarea
             value={clinicalNote}
             onChange={(e) => setClinicalNote(e.target.value)}
             rows={3}
             maxLength={300}
-            placeholder="e.g. Suspected MI, BP 80/50, O2 88%. Requires immediate ICU and cardiologist."
+            placeholder="e.g. Suspected MI, BP 80/50, O2 88%. Requires immediate ICU and ventilator."
             className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#1976D2] focus:ring-2 focus:ring-[#1976D2]/20 resize-none bg-gray-50 focus:bg-white"
           />
           <p className="text-xs text-gray-400 mt-1 text-right">{clinicalNote.length}/300</p>
+          {triageReasoning && (
+            <div className="mt-2 flex items-start gap-2 bg-violet-50 border border-violet-200 rounded-xl px-3 py-2.5">
+              <Sparkles className="w-3.5 h-3.5 text-violet-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-violet-700"><span className="font-semibold">AI:</span> {triageReasoning}</p>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 pt-2">

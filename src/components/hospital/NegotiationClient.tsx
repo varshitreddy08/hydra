@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import {
   Activity, CheckCircle2, XCircle, Play, TrendingUp,
-  Building2, Clock, AlertTriangle, Cpu, ChevronDown, ChevronUp,
+  Building2, Clock, AlertTriangle, Cpu, ChevronDown, ChevronUp, Sparkles,
 } from "lucide-react";
 import type { EmergencyRequest, Negotiation } from "@/types";
 
@@ -133,6 +133,7 @@ export function NegotiationClient({
   const [approving,       setApproving]       = useState(false);
   const [phase,           setPhase]           = useState<string>("IDLE");
   const [phaseStep,       setPhaseStep]       = useState(0);
+  const [aiExplanation,   setAiExplanation]   = useState<string | null>(null);
 
   const otherHospitals = hospitals.filter(h => h.id !== hospitalId);
 
@@ -168,6 +169,31 @@ export function NegotiationClient({
     setWinner(best);
     setNegotiating(false);
     setNegotiationDone(true);
+
+    // Fetch AI explanation for the winning hospital
+    if (best) {
+      fetch("/api/ai/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          winningHospital: best.hospital_name,
+          score: best.score,
+          severity: selectedRequest.severity,
+          resources: selectedRequest.needed_resources,
+          breakdown: {
+            availability: best.breakdown.availability,
+            distance: best.breakdown.distance,
+            equipment: best.breakdown.doctor_availability,
+            ambulance: best.breakdown.ambulance_eta,
+            load: best.breakdown.hospital_load,
+          },
+          totalBids: computedBids.length,
+        }),
+      })
+        .then(r => r.json())
+        .then(d => { if (d.explanation) setAiExplanation(d.explanation); })
+        .catch(() => null);
+    }
 
     // Persist negotiation to DB
     try {
@@ -496,6 +522,20 @@ export function NegotiationClient({
                       <p className="text-xs text-green-500">confidence</p>
                     </div>
                   </div>
+                  {/* AI Explanation */}
+                  {aiExplanation && (
+                    <div className="mb-4 flex items-start gap-2 bg-violet-50 border border-violet-200 rounded-xl px-3 py-2.5">
+                      <Sparkles className="w-3.5 h-3.5 text-violet-500 shrink-0 mt-0.5" />
+                      <p className="text-xs text-violet-700 leading-relaxed">{aiExplanation}</p>
+                    </div>
+                  )}
+                  {!aiExplanation && (
+                    <div className="mb-4 flex items-center gap-2 text-xs text-gray-400">
+                      <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                      AI generating explanation…
+                    </div>
+                  )}
+
                   <div className="flex gap-3">
                     <button
                       onClick={approveTransfer}
@@ -506,7 +546,7 @@ export function NegotiationClient({
                       {approving ? "Approving…" : "Approve Transfer"}
                     </button>
                     <button
-                      onClick={() => { setNegotiationDone(false); setBids([]); setWinner(null); setPhase("IDLE"); }}
+                      onClick={() => { setNegotiationDone(false); setBids([]); setWinner(null); setPhase("IDLE"); setAiExplanation(null); }}
                       className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 text-sm font-medium rounded-xl transition-colors"
                     >
                       <XCircle className="w-4 h-4" />
