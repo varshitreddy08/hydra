@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { Activity, Lock, Mail, AlertCircle, HeartPulse, Shield } from "lucide-react";
+import { Lock, Mail, AlertCircle, HeartPulse } from "lucide-react";
 
 let lastAttemptAt = 0;
 const MIN_ATTEMPT_GAP_MS = 2000;
@@ -68,55 +68,96 @@ export default function LoginPage() {
       <div className="w-full max-w-5xl grid lg:grid-cols-2 gap-0 bg-white rounded-3xl shadow-2xl overflow-hidden">
 
         {/* Left panel — branding */}
-        <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-[#1565C0] to-[#1976D2] p-10 text-white">
-          <div>
-            <div className="flex items-center gap-3 mb-10">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <HeartPulse className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="font-bold text-lg leading-tight">MedResponse</p>
-                <p className="text-blue-200 text-xs">Emergency Resource Network</p>
-              </div>
+        <div className="hidden lg:flex flex-col bg-gradient-to-br from-[#1565C0] to-[#1976D2] p-10 text-white">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <HeartPulse className="w-6 h-6 text-white" />
             </div>
-
-            <h2 className="text-3xl font-bold leading-tight mb-4">
-              AI-Powered Emergency<br />Resource Allocation
-            </h2>
-            <p className="text-blue-100 text-sm leading-relaxed">
-              Multi-agent negotiation platform for real-time hospital resource reallocation across the network.
-            </p>
-
-            {/* Feature list */}
-            <div className="mt-8 space-y-3">
-              {[
-                "Multi-hospital AI negotiation",
-                "Explainable allocation decisions",
-                "Real-time resource tracking",
-                "Secure tenant isolation",
-              ].map((f) => (
-                <div key={f} className="flex items-center gap-3 text-sm text-blue-100">
-                  <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                    <Activity className="w-3 h-3 text-white" />
-                  </div>
-                  {f}
-                </div>
-              ))}
+            <div>
+              <p className="font-bold text-lg leading-tight">MedResponse</p>
+              <p className="text-blue-200 text-xs">Emergency Resource Network</p>
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-4">
+          <h2 className="text-3xl font-bold leading-tight mt-8">
+            AI-Powered Emergency<br />Resource Allocation
+          </h2>
+
+          {/* Animated hospital network */}
+          <div className="flex-1 flex items-center justify-center py-4">
+            <svg viewBox="0 0 280 220" className="w-full max-w-[280px]">
+              {/* Outer glow rings */}
+              <circle cx="140" cy="110" r="55" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="28" />
+              <circle cx="140" cy="110" r="82" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="18" />
+
+              {/* Connection lines */}
+              <line x1="140" y1="110" x2="140" y2="18"  stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" strokeDasharray="4 3" />
+              <line x1="140" y1="110" x2="232" y2="60"  stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" strokeDasharray="4 3" />
+              <line x1="140" y1="110" x2="220" y2="175" stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" strokeDasharray="4 3" />
+              <line x1="140" y1="110" x2="60"  y2="175" stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" strokeDasharray="4 3" />
+              <line x1="140" y1="110" x2="48"  y2="60"  stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" strokeDasharray="4 3" />
+
+              {/* Animated resource packets */}
+              <circle r="3.5" fill="rgba(255,255,255,0.95)">
+                <animateMotion dur="2.0s" repeatCount="indefinite" begin="0s"   path="M140,110 L140,18" />
+              </circle>
+              <circle r="3.5" fill="rgba(255,220,80,0.95)">
+                <animateMotion dur="1.8s" repeatCount="indefinite" begin="0.4s" path="M232,60 L140,110" />
+              </circle>
+              <circle r="3.5" fill="rgba(100,255,160,0.95)">
+                <animateMotion dur="2.3s" repeatCount="indefinite" begin="0.8s" path="M140,110 L220,175" />
+              </circle>
+              <circle r="3.5" fill="rgba(255,255,255,0.95)">
+                <animateMotion dur="1.9s" repeatCount="indefinite" begin="1.2s" path="M60,175 L140,110" />
+              </circle>
+              <circle r="3.5" fill="rgba(255,140,80,0.95)">
+                <animateMotion dur="2.1s" repeatCount="indefinite" begin="0.6s" path="M140,110 L48,60" />
+              </circle>
+
+              {/* Hospital nodes */}
+              <circle cx="140" cy="18"  r="15" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" />
+              <text x="140" y="14"  textAnchor="middle" fill="white" fontSize="6.5" fontWeight="700">AIIMS</text>
+              <text x="140" y="23"  textAnchor="middle" fill="rgba(255,255,255,0.65)" fontSize="5">Hyderabad</text>
+
+              <circle cx="232" cy="60"  r="15" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" />
+              <text x="232" y="56"  textAnchor="middle" fill="white" fontSize="6.5" fontWeight="700">Apollo</text>
+              <text x="232" y="65"  textAnchor="middle" fill="rgba(255,255,255,0.65)" fontSize="5">Jubilee</text>
+
+              <circle cx="220" cy="175" r="15" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" />
+              <text x="220" y="171" textAnchor="middle" fill="white" fontSize="6.5" fontWeight="700">Yashoda</text>
+              <text x="220" y="180" textAnchor="middle" fill="rgba(255,255,255,0.65)" fontSize="5">Secunder.</text>
+
+              <circle cx="60"  cy="175" r="15" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" />
+              <text x="60"  y="171" textAnchor="middle" fill="white" fontSize="6.5" fontWeight="700">Care</text>
+              <text x="60"  y="180" textAnchor="middle" fill="rgba(255,255,255,0.65)" fontSize="5">Banjara</text>
+
+              <circle cx="48"  cy="60"  r="15" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" />
+              <text x="48"  y="56"  textAnchor="middle" fill="white" fontSize="6.5" fontWeight="700">KIMS</text>
+              <text x="48"  y="65"  textAnchor="middle" fill="rgba(255,255,255,0.65)" fontSize="5">Gachi.</text>
+
+              {/* Central AI node */}
+              <circle cx="140" cy="110" r="32" fill="rgba(255,255,255,0.07)" />
+              <circle cx="140" cy="110" r="25" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5" />
+              <text x="140" y="106" textAnchor="middle" fill="white" fontSize="8.5" fontWeight="800" letterSpacing="0.5">HYDRA</text>
+              <text x="140" y="118" textAnchor="middle" fill="rgba(255,255,255,0.75)" fontSize="6">AI ENGINE</text>
+            </svg>
+          </div>
+
+          {/* Status bar */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-xs text-blue-100">Network Live</span>
+            </div>
+            <span className="text-white/20">|</span>
             {[
-              { label: "Hospitals", value: "250+" },
-              { label: "AI Success Rate", value: "96%" },
-              { label: "Avg Response", value: "2.8 min" },
-              { label: "Requests Today", value: "430" },
-            ].map(({ label, value }) => (
-              <div key={label} className="bg-white/10 rounded-xl p-3">
-                <p className="text-xl font-bold">{value}</p>
-                <p className="text-blue-200 text-xs">{label}</p>
-              </div>
+              "Explainable AI",
+              "Tenant Isolated",
+              "Real-time Sync",
+            ].map((tag) => (
+              <span key={tag} className="text-xs px-2.5 py-0.5 rounded-full bg-white/10 text-blue-100 border border-white/15">
+                {tag}
+              </span>
             ))}
           </div>
         </div>
@@ -200,26 +241,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Role info */}
-          <div className="mt-8 p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-2 mb-3">
-              <Shield className="w-4 h-4 text-gray-400" />
-              <p className="text-xs font-medium text-gray-600">Access by role</p>
-            </div>
-            <div className="space-y-1.5">
-              {[
-                { role: "Platform Admin",    desc: "Manage hospitals & platform", color: "bg-purple-100 text-purple-700" },
-                { role: "Hospital Admin",    desc: "Manage hospital resources",   color: "bg-blue-100 text-blue-700" },
-                { role: "Resource Manager",  desc: "Update resource availability",color: "bg-green-100 text-green-700" },
-                { role: "Emergency Doctor",  desc: "Create & manage requests",    color: "bg-orange-100 text-orange-700" },
-              ].map(({ role, desc, color }) => (
-                <div key={role} className="flex items-center gap-2 text-xs">
-                  <span className={`px-2 py-0.5 rounded-full font-medium ${color}`}>{role}</span>
-                  <span className="text-gray-500">{desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
