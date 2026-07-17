@@ -1,303 +1,270 @@
-// ─── Hospital Types ──────────────────────────────────────────────────────────
+// ─── Hospital / Tenant Types ──────────────────────────────────────────────────
+
+export type HospitalStatus = 'pending' | 'active' | 'suspended';
+export type HospitalTier   = 'basic' | 'standard' | 'premium';
 
 export interface Hospital {
   id: string;
   name: string;
-  address: string;
-  phone: string;
+  code: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  phone?: string;
+  email?: string;
   lat?: number;
   lng?: number;
-  createdAt: number;
+  status: HospitalStatus;
+  tier: HospitalTier;
+  total_icu_beds: number;
+  total_ventilators: number;
+  total_doctors: number;
+  total_ambulances: number;
+  created_at: string;
+  updated_at: string;
 }
 
-// ─── Resource Types ──────────────────────────────────────────────────────────
+// ─── User / Auth Types ────────────────────────────────────────────────────────
+
+export type UserRole =
+  | 'platform_admin'
+  | 'hospital_admin'
+  | 'resource_manager'
+  | 'emergency_doctor';
+
+export interface Profile {
+  id: string;
+  full_name?: string;
+  email?: string;
+  role: UserRole;
+  hospital_id?: string;
+  created_at: string;
+  hospital?: Hospital;
+}
+
+// ─── Resource Types ───────────────────────────────────────────────────────────
 
 export type ResourceType =
-  | "OPERATING_ROOM"
-  | "ICU_BED"
-  | "EMERGENCY_BAY"
-  | "VENTILATOR"
-  | "CT_SCANNER"
-  | "SURGEON"
-  | "ANESTHESIOLOGIST"
-  | "NURSE_ICU"
-  | "NURSE_ED"
-  | "CARDIOLOGIST"
-  | "TRAUMA_SURGEON"
-  | "DEFIBRILLATOR"
-  | "BLOOD_BANK";
+  | 'ICU_BED'
+  | 'VENTILATOR'
+  | 'OPERATION_THEATER'
+  | 'AMBULANCE'
+  | 'EMERGENCY_ROOM'
+  | 'DOCTOR'
+  | 'SPECIALIST'
+  | 'BLOOD_BANK'
+  | 'CT_SCANNER'
+  | 'DEFIBRILLATOR';
 
 export type ResourceStatus =
-  | "AVAILABLE"
-  | "OCCUPIED"
-  | "RESERVED"
-  | "MAINTENANCE"
-  | "OFFLINE";
+  | 'AVAILABLE'
+  | 'OCCUPIED'
+  | 'RESERVED'
+  | 'MAINTENANCE'
+  | 'OFFLINE';
 
 export interface Resource {
   id: string;
-  hospitalId: string;
+  hospital_id: string;
   type: ResourceType;
   name: string;
   status: ResourceStatus;
-  location: string;
-  capabilities: string[];
-  currentPatientId: string | null;
-  utilizationHistory: number[]; // last 60 ticks: 0=idle, 1=occupied
-  createdAt: number;
-  updatedAt: number;
+  specialization?: string;
+  location?: string;
+  current_request_id?: string;
+  last_updated: string;
+  created_at: string;
+  hospital?: Hospital;
 }
 
-export interface ResourceDependency {
-  from: ResourceType;
-  to: ResourceType;
-  dependencyType: "REQUIRES" | "PREFERS";
-  description: string;
-}
+// ─── Emergency Request Types ──────────────────────────────────────────────────
 
-// ─── Patient Types ───────────────────────────────────────────────────────────
+export type Severity       = 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
+export type BloodGroup     = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-' | 'UNKNOWN';
+export type RequestStatus  =
+  | 'PENDING'
+  | 'NEGOTIATING'
+  | 'ALLOCATED'
+  | 'TRANSFERRED'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
-export type TriageLevel =
-  | "P1_IMMEDIATE"
-  | "P2_EMERGENT"
-  | "P3_URGENT"
-  | "P4_LESS_URGENT"
-  | "P5_NON_URGENT";
-
-export type PatientStatus =
-  | "WAITING"
-  | "IN_NEGOTIATION"
-  | "ALLOCATED"
-  | "IN_TREATMENT"
-  | "DISCHARGED";
-
-export type ClinicalCondition =
-  | "CARDIAC_ARREST"
-  | "TRAUMA_MAJOR"
-  | "STROKE_ISCHEMIC"
-  | "STROKE_HEMORRHAGIC"
-  | "SEPSIS"
-  | "RESPIRATORY_FAILURE"
-  | "BURNS_MAJOR"
-  | "POLYTRAUMA"
-  | "ANAPHYLAXIS"
-  | "OVERDOSE";
-
-export interface Vitals {
-  heartRate: number;
-  systolicBP: number;
-  diastolicBP: number;
-  respiratoryRate: number;
-  oxygenSaturation: number;
-  temperature: number;
-  consciousnessScore: number; // GCS 3-15
-  timestamp: number;
-}
-
-export interface TriageScore {
-  raw: number; // 0-100
-  triageLevel: TriageLevel;
-  mewsScore: number; // 0-14
-  esiScore: number; // 1-5
-  timeFactorPenalty: number;
-  conditionWeight: number;
-  breakdown: {
-    vitalScore: number;
-    conditionScore: number;
-    waitTimeScore: number;
-  };
-  computedAt: number;
-}
-
-export interface Patient {
+export interface EmergencyRequest {
   id: string;
-  mrn: string;
-  age: number;
-  sex: "M" | "F" | "OTHER";
-  condition: ClinicalCondition;
-  conditionDetails: string;
-  triageScore: TriageScore;
-  vitals: Vitals;
-  vitalsHistory: Vitals[];
-  status: PatientStatus;
-  allocatedResources: string[];
-  requiresResourceTypes: ResourceType[];
-  requiredCapabilities: string[];
-  arrivedAt: number;
-  treatmentStartedAt: number | null;
-  dischargedAt: number | null;
-  estimatedTreatmentDuration: number;
-  referredHospitalIds?: string[];
-  admittedByHospitalId?: string;
+  hospital_id: string;
+  patient_token: string;
+  severity: Severity;
+  blood_group?: BloodGroup;
+  needed_resources: ResourceType[];
+  eta_minutes?: number;
+  status: RequestStatus;
+  clinical_note?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  hospital?: Hospital;
 }
 
-// ─── Agent Types ─────────────────────────────────────────────────────────────
+// ─── Negotiation Types ────────────────────────────────────────────────────────
+
+export type NegotiationStatus = 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+
+export interface Negotiation {
+  id: string;
+  request_id: string;
+  requesting_hospital_id: string;
+  status: NegotiationStatus;
+  round_number: number;
+  started_at: string;
+  completed_at?: string;
+  winning_hospital_id?: string;
+  overall_score?: number;
+  summary?: string;
+  request?: EmergencyRequest;
+  requesting_hospital?: Hospital;
+  winning_hospital?: Hospital;
+}
+
+export interface ScoreBreakdown {
+  availability: number;
+  distance: number;
+  doctor_availability: number;
+  ambulance_eta: number;
+  hospital_load: number;
+}
+
+export type BidStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
+
+export interface NegotiationBid {
+  id: string;
+  negotiation_id: string;
+  bidding_hospital_id: string;
+  resource_type: ResourceType;
+  available_count: number;
+  score?: number;
+  score_breakdown?: ScoreBreakdown;
+  status: BidStatus;
+  created_at: string;
+  bidding_hospital?: Hospital;
+}
+
+// ─── Decision / Explainable AI Types ─────────────────────────────────────────
+
+export interface AllocatedResource {
+  type: ResourceType;
+  hospital_id: string;
+  hospital_name: string;
+  count: number;
+}
+
+export interface ReasoningFactors {
+  availability: number;
+  distance: number;
+  doctor_availability: number;
+  ambulance_eta: number;
+  hospital_load: number;
+}
+
+export interface Decision {
+  id: string;
+  negotiation_id?: string;
+  request_id: string;
+  winning_hospital_id?: string;
+  allocated_resources?: AllocatedResource[];
+  reasoning_factors?: ReasoningFactors;
+  natural_language_summary?: string;
+  confidence_score?: number;
+  decision_time_ms?: number;
+  audit_hash?: string;
+  decided_at: string;
+  winning_hospital?: Hospital;
+  request?: EmergencyRequest;
+}
+
+// ─── Audit Log Types ──────────────────────────────────────────────────────────
+
+export interface AuditLog {
+  id: string;
+  user_id?: string;
+  user_role?: string;
+  hospital_id?: string;
+  hospital_name?: string;
+  action: string;
+  entity_type?: string;
+  entity_id?: string;
+  metadata?: Record<string, unknown>;
+  ip_address?: string;
+  created_at: string;
+}
+
+// ─── System Config Types ──────────────────────────────────────────────────────
+
+export interface AIScoringWeights {
+  availability: number;
+  distance: number;
+  doctor_availability: number;
+  ambulance_eta: number;
+  hospital_load: number;
+}
+
+export interface EmergencyConfig {
+  max_negotiation_rounds: number;
+  negotiation_timeout_seconds: number;
+  auto_escalate_critical: boolean;
+  min_hospitals_to_negotiate: number;
+}
+
+// ─── Agent Types (simulation) ─────────────────────────────────────────────────
+
+export type AgentType =
+  | 'ICU_AGENT'
+  | 'VENTILATOR_AGENT'
+  | 'DOCTOR_AGENT'
+  | 'AMBULANCE_AGENT'
+  | 'OT_AGENT'
+  | 'EQUIPMENT_AGENT'
+  | 'PRIORITY_AGENT'
+  | 'NEGOTIATION_AGENT';
 
 export type AgentState =
-  | "IDLE"
-  | "LISTENING"
-  | "BIDDING"
-  | "BID_ACCEPTED"
-  | "BID_REJECTED"
-  | "ALLOCATED"
-  | "RELEASING"
-  | "MAINTENANCE"
-  | "BLOCKED";
+  | 'IDLE'
+  | 'MONITORING'
+  | 'NEGOTIATING'
+  | 'ALLOCATED'
+  | 'OFFLINE';
 
-export interface BidBreakdown {
-  availabilityScore: number;
-  capabilityScore: number;
-  proximityScore: number;
-  utilizationPenalty: number;
-  specialtyBonus: number;
-  urgencyMultiplier: number;
-  finalScore: number;
-}
-
-export interface Bid {
+export interface Agent {
   id: string;
-  agentId: string;
-  resourceId: string;
-  patientId: string;
-  roundId: string;
-  score: number;
-  confidence: number;
-  breakdown: BidBreakdown;
-  timestamp: number;
-  accepted: boolean | null;
-}
-
-export interface ResourceAgent {
-  id: string;
-  resourceId: string;
+  type: AgentType;
+  hospital_id: string;
   state: AgentState;
-  currentBid: Bid | null;
-  currentPatientId: string | null;
-  performanceMetrics: {
-    totalAllocations: number;
-    bidsSubmitted: number;
-    bidsWon: number;
-    averageBidScore: number;
-  };
+  label: string;
+  current_bid?: number;
+  last_action?: string;
 }
 
-// ─── Negotiation Types ───────────────────────────────────────────────────────
+// ─── Platform Analytics Types ─────────────────────────────────────────────────
 
-export type NegotiationPhase =
-  | "IDLE"
-  | "ANNOUNCEMENT"
-  | "BIDDING"
-  | "EVALUATION"
-  | "DEPENDENCY_CHECK"
-  | "AWARD"
-  | "COMPLETED"
-  | "FAILED";
-
-export interface NegotiationEvent {
-  id: string;
-  roundId: string;
-  type:
-    | "CFP_BROADCAST"
-    | "BID_SUBMITTED"
-    | "BID_EVALUATED"
-    | "DEPENDENCY_RESOLVED"
-    | "DEPENDENCY_FAILED"
-    | "AWARD_ISSUED"
-    | "ROUND_COMPLETED"
-    | "ROUND_FAILED";
-  agentId: string | null;
-  patientId: string;
-  payload: Record<string, unknown>;
-  timestamp: number;
+export interface PlatformStats {
+  total_hospitals: number;
+  active_hospitals: number;
+  pending_hospitals: number;
+  suspended_hospitals: number;
+  total_emergency_requests_today: number;
+  active_negotiations: number;
+  avg_response_time_minutes: number;
+  ai_success_rate: number;
 }
 
-export interface NegotiationRound {
-  id: string;
-  patientId: string;
-  phase: NegotiationPhase;
-  startedAt: number;
-  completedAt: number | null;
-  durationMs: number | null;
-  bids: Bid[];
-  winningBids: Bid[];
-  failureReason: string | null;
-  events: NegotiationEvent[];
-}
-
-// ─── Decision Types ──────────────────────────────────────────────────────────
-
-export type DecisionOutcome = "ALLOCATED" | "QUEUED" | "FAILED";
-
-export interface ReasoningFactor {
-  factor: string;
-  value: string | number;
-  weight: number;
-  direction: "POSITIVE" | "NEGATIVE" | "NEUTRAL";
-  explanation: string;
-}
-
-export interface AllocationDecision {
-  id: string;
-  roundId: string;
-  patientId: string;
-  outcome: DecisionOutcome;
-  allocatedResourceIds: string[];
-  rejectedAlternatives: {
-    resourceId: string;
-    reason: string;
-    bidScore: number;
-  }[];
-  reasoningFactors: ReasoningFactor[];
-  naturalLanguageSummary: string;
-  confidenceScore: number;
-  decisionTimeMs: number;
-  decidedAt: number;
-  auditHash: string;
-}
-
-export interface AuditLogEntry {
-  id: string;
-  entityType: "PATIENT" | "RESOURCE" | "NEGOTIATION" | "DECISION" | "SYSTEM";
-  entityId: string;
-  action: string;
-  actorType: "AGENT" | "USER" | "SYSTEM";
-  decision: AllocationDecision | null;
-  timestamp: number;
-}
-
-// ─── Simulation Types ────────────────────────────────────────────────────────
-
-export interface SimulationConfig {
-  tickIntervalMs: number;
-  maxNegotiationIterations: number;
-  criticalPriorityBoost: number;
-}
-
-export type SimulationStatus = "IDLE" | "RUNNING" | "PAUSED";
-
-export interface SimulationMetrics {
-  totalPatientsAdmitted: number;
-  totalAllocations: number;
-  totalFailed: number;
-  avgDecisionTimeMs: number;
-  resourceUtilization: number; // 0-1
-  activeNegotiations: number;
-  patientsInQueue: number;
-}
-
-// ─── Analytics Types ─────────────────────────────────────────────────────────
-
-export interface UtilizationDataPoint {
-  tick: number;
-  timestamp: number;
-  utilization: number;
-  activePatients: number;
-  availableResources: number;
-}
-
-export interface NegotiationOutcomeData {
-  tick: number;
-  allocated: number;
-  failed: number;
-  avgDecisionMs: number;
+export interface HospitalStats {
+  available_icu_beds: number;
+  total_icu_beds: number;
+  available_ventilators: number;
+  total_ventilators: number;
+  available_doctors: number;
+  total_doctors: number;
+  available_ambulances: number;
+  total_ambulances: number;
+  active_emergency_requests: number;
+  active_negotiations: number;
 }

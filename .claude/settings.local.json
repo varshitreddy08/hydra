@@ -39,7 +39,22 @@
       "PowerShell(head *)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Varshit's Workspace\\\\hackathon\" -Force | ForEach-Object { if \\($_.PSIsContainer\\) { \"DIR:  \" + $_.Name } else { \"FILE: \" + $_.Name } })",
       "Bash(xargs grep -l \"useState.*\\\\[\\\\|hardcoded\\\\|mockData\\\\|testData\")",
-      "Bash(xargs cat)"
+      "Bash(xargs cat)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Varshit's Workspace\\\\hackathon\" -Recurse -Force)",
+      "Bash(Select-Object -Property FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Varshit's Workspace\\\\hackathon\" -Recurse -Force | Select-Object -Property FullName, PSIsContainer | Sort-Object FullName | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Varshit's Workspace\\\\hackathon\" -Directory | Sort-Object Name | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Varshit's Workspace\\\\hackathon\" -File | Sort-Object Name | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Varshit's Workspace\\\\hackathon\\\\src\\\\types\" -File | Sort-Object Name | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Varshit's Workspace\\\\hackathon\\\\src\" -Recurse -File -Name | Where-Object { $_ -match \"\\\\.\\(tsx|ts\\)$\" -and -not $_ -match \"node_modules\" } | Measure-Object | Select-Object -ExpandProperty Count)",
+      "Bash(Remove-Item -Recurse -Force \"src\\\\app\\\\super-admin\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Recurse -Force \"src\\\\app\\\\hospital-login\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Recurse -Force \"src\\\\app\\\\hospital-portal\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Recurse -Force \"src\\\\app\\\\patients\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Recurse -Force \"src\\\\app\\\\dashboard\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(cd \"C:\\\\Varshit's Workspace\\\\hackathon\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch \"^.next\" } | Select-Object -First 40)"
     ]
   }
 }

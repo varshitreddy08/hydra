@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import StoreInitializer from "@/components/StoreInitializer";
 
 export const metadata: Metadata = {
-  title: "MedNegotiate — Emergency Resource Allocation",
+  title: "MedResponse — Emergency Resource Allocation",
   description:
-    "Multi-agent negotiation platform for real-time hospital emergency resource reallocation",
+    "Multi-agent AI negotiation platform for real-time emergency resource reallocation across hospital networks",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full">
       <body className="h-full">
-        <StoreInitializer />
         {children}
       </body>
     </html>
