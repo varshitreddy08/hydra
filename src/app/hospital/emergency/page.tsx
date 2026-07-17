@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus, AlertTriangle, Clock, CheckCircle2, XCircle, Activity, Eye, CalendarDays } from "lucide-react";
 import type { EmergencyRequest } from "@/types";
+import { DeleteRequestButton } from "@/components/hospital/DeleteRequestButton";
 
 function groupByDate(requests: EmergencyRequest[]): { label: string; items: EmergencyRequest[] }[] {
   const map = new Map<string, EmergencyRequest[]>();
@@ -117,6 +118,7 @@ export default async function EmergencyPage() {
                       <Eye className="w-3.5 h-3.5" />
                       View
                     </Link>
+                    {canCreate && <DeleteRequestButton id={r.id} token={r.patient_token} />}
                   </div>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -196,6 +198,7 @@ export default async function EmergencyPage() {
                     <Link href={`/hospital/emergency/${r.id}`} className="text-xs text-[#1976D2] hover:underline flex items-center gap-1 shrink-0">
                       <Eye className="w-3.5 h-3.5" />
                     </Link>
+                    {canCreate && <DeleteRequestButton id={r.id} token={r.patient_token} />}
                   </div>
                 ))}
               </div>
