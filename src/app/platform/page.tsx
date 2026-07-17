@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import {
   Building2, Activity, AlertTriangle, CheckCircle2,
-  TrendingUp, Clock, Cpu, Users, XCircle
+  TrendingUp, Clock, Cpu, Users, XCircle,
+  BedDouble, Wind, Stethoscope, Truck
 } from "lucide-react";
 import Link from "next/link";
 
@@ -136,30 +137,32 @@ export default async function PlatformDashboard() {
               {
                 label: "ICU Beds",
                 total: hospitals.reduce((s, h) => s + (h.total_icu_beds || 0), 0),
-                icon: "🛏",
+                Icon: BedDouble,
                 color: "bg-blue-500",
               },
               {
                 label: "Ventilators",
                 total: hospitals.reduce((s, h) => s + (h.total_ventilators || 0), 0),
-                icon: "🫁",
+                Icon: Wind,
                 color: "bg-purple-500",
               },
               {
                 label: "Doctors",
                 total: hospitals.reduce((s, h) => s + (h.total_doctors || 0), 0),
-                icon: "👨‍⚕️",
+                Icon: Stethoscope,
                 color: "bg-teal-500",
               },
               {
                 label: "Ambulances",
                 total: hospitals.reduce((s, h) => s + (h.total_ambulances || 0), 0),
-                icon: "🚑",
+                Icon: Truck,
                 color: "bg-orange-500",
               },
-            ].map(({ label, total, icon, color }) => (
+            ].map(({ label, total, Icon, color }) => (
               <div key={label} className="flex items-center gap-3">
-                <span className="text-xl w-8 text-center">{icon}</span>
+                <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center shrink-0`}>
+                  <Icon className="w-4 h-4 text-white" />
+                </div>
                 <div className="flex-1">
                   <div className="flex justify-between mb-1">
                     <span className="text-xs font-medium text-gray-700">{label}</span>

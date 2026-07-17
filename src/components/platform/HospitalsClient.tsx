@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   Building2, CheckCircle2, Clock, XCircle, Plus,
   Search, Shield, ShieldOff, MapPin, Phone, Star,
-  Loader2,
+  Loader2, BedDouble, Wind, Stethoscope, Truck,
 } from "lucide-react";
 import type { Hospital, HospitalStatus } from "@/types";
 
@@ -145,13 +145,13 @@ export function HospitalsClient({ hospitals }: Props) {
                 {/* Resource counts */}
                 <div className="grid grid-cols-4 gap-2 mb-4">
                   {[
-                    { label: "ICU", value: h.total_icu_beds,     emoji: "🛏" },
-                    { label: "Vent", value: h.total_ventilators, emoji: "🫁" },
-                    { label: "Dr",   value: h.total_doctors,     emoji: "👨‍⚕️" },
-                    { label: "Amb",  value: h.total_ambulances,  emoji: "🚑" },
-                  ].map(({ label, value, emoji }) => (
+                    { label: "ICU",  value: h.total_icu_beds,     Icon: BedDouble   },
+                    { label: "Vent", value: h.total_ventilators,  Icon: Wind        },
+                    { label: "Dr",   value: h.total_doctors,      Icon: Stethoscope },
+                    { label: "Amb",  value: h.total_ambulances,   Icon: Truck       },
+                  ].map(({ label, value, Icon }) => (
                     <div key={label} className="bg-gray-50 rounded-xl p-2 text-center border border-gray-100">
-                      <p className="text-base">{emoji}</p>
+                      <Icon className="w-4 h-4 mx-auto mb-0.5 text-gray-400" />
                       <p className="text-sm font-bold text-gray-900">{value}</p>
                       <p className="text-xs text-gray-400">{label}</p>
                     </div>

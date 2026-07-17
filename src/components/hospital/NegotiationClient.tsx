@@ -53,7 +53,7 @@ function computeBid(
   }
 
   // Doctor availability
-  const doctorAvail = hospResources.filter(r => r.type === "DOCTOR" || r.type === "SPECIALIST").length;
+  const doctorAvail = hospResources.filter(r => r.type === "MRI_MACHINE" || r.type === "OXYGEN_CONCENTRATOR").length;
   const doctorScore = Math.min(doctorAvail * 25, 100);
 
   // Ambulance ETA

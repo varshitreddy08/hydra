@@ -3,21 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { AlertTriangle, Plus, X, ArrowLeft, Loader2 } from "lucide-react";
+import { AlertTriangle, Plus, X, ArrowLeft, Loader2, BedDouble, Wind, Scissors, Truck, Zap, ScanLine, Gauge, Droplets, Scan, HeartPulse } from "lucide-react";
 import Link from "next/link";
 import type { ResourceType, Severity, BloodGroup } from "@/types";
 
-const RESOURCE_OPTIONS: { type: ResourceType; label: string; icon: string }[] = [
-  { type: "ICU_BED",           label: "ICU Bed",           icon: "🛏" },
-  { type: "VENTILATOR",        label: "Ventilator",        icon: "🫁" },
-  { type: "OPERATION_THEATER", label: "Operation Theater", icon: "🏥" },
-  { type: "AMBULANCE",         label: "Ambulance",         icon: "🚑" },
-  { type: "EMERGENCY_ROOM",    label: "Emergency Room",    icon: "⚡" },
-  { type: "DOCTOR",            label: "Doctor",            icon: "👨‍⚕️" },
-  { type: "SPECIALIST",        label: "Specialist",        icon: "🩺" },
-  { type: "BLOOD_BANK",        label: "Blood Bank",        icon: "🩸" },
-  { type: "CT_SCANNER",        label: "CT Scanner",        icon: "📡" },
-  { type: "DEFIBRILLATOR",     label: "Defibrillator",    icon: "⚡" },
+const RESOURCE_OPTIONS: { type: ResourceType; label: string; Icon: React.ElementType }[] = [
+  { type: "ICU_BED",              label: "ICU Bed",             Icon: BedDouble  },
+  { type: "VENTILATOR",           label: "Ventilator",          Icon: Wind       },
+  { type: "OPERATION_THEATER",    label: "Operation Theater",   Icon: Scissors   },
+  { type: "AMBULANCE",            label: "Ambulance",           Icon: Truck      },
+  { type: "EMERGENCY_ROOM",       label: "Emergency Room",      Icon: Zap        },
+  { type: "MRI_MACHINE",          label: "MRI Machine",         Icon: ScanLine   },
+  { type: "OXYGEN_CONCENTRATOR",  label: "Oxygen Concentrator", Icon: Gauge      },
+  { type: "BLOOD_BANK",           label: "Blood Bank",          Icon: Droplets   },
+  { type: "CT_SCANNER",           label: "CT Scanner",          Icon: Scan       },
+  { type: "DEFIBRILLATOR",        label: "Defibrillator",       Icon: HeartPulse },
 ];
 
 const BLOOD_GROUPS: BloodGroup[] = ["A+","A-","B+","B-","AB+","AB-","O+","O-","UNKNOWN"];
@@ -153,7 +153,7 @@ export default function NewEmergencyPage() {
             Resources Needed <span className="text-red-500">*</span>
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {RESOURCE_OPTIONS.map(({ type, label, icon }) => {
+            {RESOURCE_OPTIONS.map(({ type, label, Icon }) => {
               const selected = selectedResources.includes(type);
               return (
                 <button
@@ -166,7 +166,7 @@ export default function NewEmergencyPage() {
                       : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300"
                   }`}
                 >
-                  <span>{icon}</span>
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
                   {label}
                   {selected && <X className="w-3 h-3 ml-auto" />}
                 </button>

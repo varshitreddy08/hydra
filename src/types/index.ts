@@ -50,8 +50,8 @@ export type ResourceType =
   | 'OPERATION_THEATER'
   | 'AMBULANCE'
   | 'EMERGENCY_ROOM'
-  | 'DOCTOR'
-  | 'SPECIALIST'
+  | 'MRI_MACHINE'
+  | 'OXYGEN_CONCENTRATOR'
   | 'BLOOD_BANK'
   | 'CT_SCANNER'
   | 'DEFIBRILLATOR';

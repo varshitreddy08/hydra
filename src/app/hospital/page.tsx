@@ -48,7 +48,7 @@ export default async function HospitalDashboard() {
 
   const icuBeds     = resources.filter(r => r.type === "ICU_BED");
   const ventilators = resources.filter(r => r.type === "VENTILATOR");
-  const doctors     = resources.filter(r => r.type === "DOCTOR" || r.type === "SPECIALIST");
+  const doctors     = resources.filter(r => r.type === "MRI_MACHINE" || r.type === "OXYGEN_CONCENTRATOR");
   const ambulances  = resources.filter(r => r.type === "AMBULANCE");
 
   const avail = (arr: typeof resources) => arr.filter(r => r.status === "AVAILABLE").length;
@@ -78,7 +78,7 @@ export default async function HospitalDashboard() {
         {[
           { label: "ICU Beds",    avail: avail(icuBeds),     total: icuBeds.length,     icon: BedDouble,    color: "#1976D2", bg: "#EFF6FF", border: "#BFDBFE" },
           { label: "Ventilators", avail: avail(ventilators), total: ventilators.length, icon: Wind,         color: "#7C3AED", bg: "#F5F3FF", border: "#DDD6FE" },
-          { label: "Doctors",     avail: avail(doctors),     total: doctors.length,     icon: Stethoscope,  color: "#0D9488", bg: "#F0FDF4", border: "#BBF7D0" },
+          { label: "Med Equipment", avail: avail(doctors),   total: doctors.length,     icon: Stethoscope,  color: "#0D9488", bg: "#F0FDF4", border: "#BBF7D0" },
           { label: "Ambulances",  avail: avail(ambulances),  total: ambulances.length,  icon: Ambulance,    color: "#EA580C", bg: "#FFF7ED", border: "#FED7AA" },
         ].map(({ label, avail: a, total, icon: Icon, color, bg, border }) => {
           const pct = total > 0 ? Math.round((a / total) * 100) : 0;

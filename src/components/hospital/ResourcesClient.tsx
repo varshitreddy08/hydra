@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Filter, CheckCircle2, Clock, XCircle, Wrench, Wifi } from "lucide-react";
+import { Plus, Search, Filter, CheckCircle2, Clock, XCircle, Wrench, Wifi, Pencil, Trash2, BedDouble, Wind, Scissors, Truck, Zap, ScanLine, Gauge, Droplets, Scan, HeartPulse, Package, MapPin } from "lucide-react";
 import type { Resource, ResourceStatus, ResourceType } from "@/types";
 
 const statusConfig: Record<ResourceStatus, { label: string; color: string; icon: React.ElementType }> = {
@@ -14,10 +14,10 @@ const statusConfig: Record<ResourceStatus, { label: string; color: string; icon:
   OFFLINE:     { label: "Offline",     color: "bg-gray-100 text-gray-500 border-gray-200",    icon: XCircle },
 };
 
-const typeIcons: Record<string, string> = {
-  ICU_BED: "🛏", VENTILATOR: "🫁", OPERATION_THEATER: "🏥",
-  AMBULANCE: "🚑", EMERGENCY_ROOM: "⚡", DOCTOR: "👨‍⚕️",
-  SPECIALIST: "🩺", BLOOD_BANK: "🩸", CT_SCANNER: "📡", DEFIBRILLATOR: "⚡",
+const typeIconMap: Record<string, React.ElementType> = {
+  ICU_BED: BedDouble, VENTILATOR: Wind, OPERATION_THEATER: Scissors,
+  AMBULANCE: Truck, EMERGENCY_ROOM: Zap, MRI_MACHINE: ScanLine,
+  OXYGEN_CONCENTRATOR: Gauge, BLOOD_BANK: Droplets, CT_SCANNER: Scan, DEFIBRILLATOR: HeartPulse,
 };
 
 interface Props {
@@ -31,8 +31,10 @@ export function ResourcesClient({ resources, hospitalId, canEdit }: Props) {
   const [search, setSearch]       = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [showAdd, setShowAdd]     = useState(false);
-  const [updating, setUpdating]   = useState<string | null>(null);
+  const [showAdd, setShowAdd]         = useState(false);
+  const [editResource, setEditResource] = useState<Resource | null>(null);
+  const [deletingId, setDeletingId]   = useState<string | null>(null);
+  const [updating, setUpdating]       = useState<string | null>(null);
 
   const types = ["ALL", ...new Set(resources.map(r => r.type))];
 
@@ -42,6 +44,14 @@ export function ResourcesClient({ resources, hospitalId, canEdit }: Props) {
     const matchSearch = !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.type.toLowerCase().includes(search.toLowerCase());
     return matchType && matchStatus && matchSearch;
   });
+
+  async function deleteResource(id: string) {
+    setDeletingId(id);
+    const supabase = createClient();
+    await supabase.from("resources").delete().eq("id", id);
+    router.refresh();
+    setDeletingId(null);
+  }
 
   async function updateStatus(id: string, status: ResourceStatus) {
     setUpdating(id);
@@ -137,22 +147,46 @@ export function ResourcesClient({ resources, hospitalId, canEdit }: Props) {
           {filtered.map((r) => {
             const cfg  = statusConfig[r.status];
             const Icon = cfg.icon;
+            const TypeIcon = typeIconMap[r.type] || Package;
             const isUpdating = updating === r.id;
             return (
               <div key={r.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm card-hover">
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{typeIcons[r.type] || "📦"}</span>
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                        <TypeIcon className="w-4 h-4 text-gray-600" />
+                      </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">{r.name}</p>
                         <p className="text-xs text-gray-400">{r.type.replace(/_/g, " ")}</p>
                       </div>
                     </div>
-                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border ${cfg.color}`}>
-                      <Icon className="w-3 h-3" />
-                      {cfg.label}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border ${cfg.color}`}>
+                        <Icon className="w-3 h-3" />
+                        {cfg.label}
+                      </span>
+                      {canEdit && (
+                        <>
+                          <button
+                            onClick={() => setEditResource(r)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-[#1976D2] hover:bg-blue-50 transition-colors"
+                            title="Edit"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteResource(r.id)}
+                            disabled={deletingId === r.id}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   {r.specialization && (
                     <p className="text-xs text-purple-600 bg-purple-50 border border-purple-200 rounded-lg px-2 py-1 mb-2 w-fit">
@@ -160,7 +194,7 @@ export function ResourcesClient({ resources, hospitalId, canEdit }: Props) {
                     </p>
                   )}
                   {r.location && (
-                    <p className="text-xs text-gray-400 mb-3">📍 {r.location}</p>
+                    <p className="text-xs text-gray-400 mb-3 flex items-center gap-1"><MapPin className="w-3 h-3" />{r.location}</p>
                   )}
 
                   {canEdit && (
@@ -188,10 +222,78 @@ export function ResourcesClient({ resources, hospitalId, canEdit }: Props) {
         </div>
       )}
 
-      {/* Add Resource Modal */}
       {showAdd && (
         <AddResourceModal hospitalId={hospitalId} onClose={() => { setShowAdd(false); router.refresh(); }} />
       )}
+      {editResource && (
+        <EditResourceModal resource={editResource} onClose={() => { setEditResource(null); router.refresh(); }} />
+      )}
+    </div>
+  );
+}
+
+function EditResourceModal({ resource, onClose }: { resource: Resource; onClose: () => void }) {
+  const [type,    setType]    = useState<ResourceType>(resource.type);
+  const [name,    setName]    = useState(resource.name);
+  const [spec,    setSpec]    = useState(resource.specialization || "");
+  const [loc,     setLoc]     = useState(resource.location || "");
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState<string | null>(null);
+  const router = useRouter();
+
+  const TYPES: ResourceType[] = [
+    "ICU_BED","VENTILATOR","OPERATION_THEATER","AMBULANCE",
+    "EMERGENCY_ROOM","MRI_MACHINE","OXYGEN_CONCENTRATOR","BLOOD_BANK","CT_SCANNER","DEFIBRILLATOR",
+  ];
+
+  async function handleSave() {
+    if (!name.trim()) { setError("Name is required"); return; }
+    setLoading(true);
+    const supabase = createClient();
+    const { error: err } = await supabase.from("resources").update({
+      type,
+      name:           name.trim(),
+      specialization: spec.trim() || null,
+      location:       loc.trim() || null,
+      last_updated:   new Date().toISOString(),
+    }).eq("id", resource.id);
+    if (err) { setError(err.message); setLoading(false); return; }
+    router.refresh();
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+        <h3 className="text-lg font-bold text-gray-900">Edit Resource</h3>
+        {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Resource Type</label>
+          <select value={type} onChange={e => setType(e.target.value as ResourceType)} className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#1976D2] bg-gray-50">
+            {TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Name / ID</label>
+          <input value={name} onChange={e => setName(e.target.value)} className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#1976D2] bg-gray-50" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Specialization (optional)</label>
+          <input value={spec} onChange={e => setSpec(e.target.value)} placeholder="e.g. CARDIOLOGIST" className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#1976D2] bg-gray-50" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Location (optional)</label>
+          <input value={loc} onChange={e => setLoc(e.target.value)} placeholder="e.g. Wing A, Floor 2" className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#1976D2] bg-gray-50" />
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={loading} className="flex-1 py-2.5 bg-[#1976D2] hover:bg-[#1565C0] disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-colors">
+            {loading ? "Saving…" : "Save Changes"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -207,7 +309,7 @@ function AddResourceModal({ hospitalId, onClose }: { hospitalId: string; onClose
 
   const TYPES: ResourceType[] = [
     "ICU_BED","VENTILATOR","OPERATION_THEATER","AMBULANCE",
-    "EMERGENCY_ROOM","DOCTOR","SPECIALIST","BLOOD_BANK","CT_SCANNER","DEFIBRILLATOR",
+    "EMERGENCY_ROOM","MRI_MACHINE","OXYGEN_CONCENTRATOR","BLOOD_BANK","CT_SCANNER","DEFIBRILLATOR",
   ];
 
   async function handleAdd() {
