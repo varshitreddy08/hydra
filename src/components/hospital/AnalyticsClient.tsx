@@ -36,6 +36,22 @@ export function AnalyticsClient({ requests, negotiations, resources }: Props) {
     occupied:  resources.filter(r => r.type === type && r.status === "OCCUPIED").length,
   }));
 
+  // Requests by month (last 6 months)
+  const byMonth = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - (5 - i));
+    const label = d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+    const count = requests.filter(r => {
+      const rd = new Date(r.created_at);
+      return rd.getMonth() === d.getMonth() && rd.getFullYear() === d.getFullYear();
+    }).length;
+    const critical = requests.filter(r => {
+      const rd = new Date(r.created_at);
+      return rd.getMonth() === d.getMonth() && rd.getFullYear() === d.getFullYear() && r.severity === "CRITICAL";
+    }).length;
+    return { name: label, total: count, critical };
+  });
+
   // Negotiation scores over time
   const negScores = negotiations
     .filter(n => n.overall_score !== null)
@@ -85,6 +101,25 @@ export function AnalyticsClient({ requests, negotiations, resources }: Props) {
               <Bar dataKey="requests" fill="#1976D2" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Requests per month */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Emergency Requests — Last 6 Months</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={byMonth}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #E5E7EB", fontSize: 12 }} />
+              <Bar dataKey="total"    fill="#1976D2" radius={[4, 4, 0, 0]} name="Total"    />
+              <Bar dataKey="critical" fill="#DC2626" radius={[4, 4, 0, 0]} name="Critical" />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="flex items-center gap-4 mt-3">
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-[#1976D2]" /><span className="text-xs text-gray-500">Total</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-[#DC2626]" /><span className="text-xs text-gray-500">Critical</span></div>
+          </div>
         </div>
 
         {/* Severity distribution */}

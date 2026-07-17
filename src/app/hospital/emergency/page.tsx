@@ -1,8 +1,25 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Plus, AlertTriangle, Clock, CheckCircle2, XCircle, Activity, Eye } from "lucide-react";
+import { Plus, AlertTriangle, Clock, CheckCircle2, XCircle, Activity, Eye, CalendarDays } from "lucide-react";
 import type { EmergencyRequest } from "@/types";
+
+function groupByDate(requests: EmergencyRequest[]): { label: string; items: EmergencyRequest[] }[] {
+  const map = new Map<string, EmergencyRequest[]>();
+  const today     = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+  for (const r of requests) {
+    const d = new Date(r.created_at).toDateString();
+    const label =
+      d === today     ? "Today" :
+      d === yesterday ? "Yesterday" :
+      new Date(r.created_at).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+    if (!map.has(label)) map.set(label, []);
+    map.get(label)!.push(r);
+  }
+  return Array.from(map.entries()).map(([label, items]) => ({ label, items }));
+}
 
 const severityOrder = { CRITICAL: 0, HIGH: 1, MODERATE: 2, LOW: 3 };
 
@@ -26,6 +43,7 @@ export default async function EmergencyPage() {
   const active   = requests.filter(r => ["PENDING","NEGOTIATING","ALLOCATED"].includes(r.status))
     .sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
   const past     = requests.filter(r => ["COMPLETED","TRANSFERRED","CANCELLED"].includes(r.status));
+  const grouped  = groupByDate(past);
 
   const canCreate = ["hospital_admin","emergency_doctor"].includes(profile.role);
 
@@ -126,57 +144,63 @@ export default async function EmergencyPage() {
         </div>
       )}
 
-      {/* Past requests */}
-      {past.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-900">History ({past.length})</h3>
+      {/* Past requests — grouped by date */}
+      {grouped.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-gray-400" />
+            <h3 className="text-sm font-semibold text-gray-900">History by Date ({past.length} total)</h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Patient</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Severity</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Resources</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {past.slice(0, 20).map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-3 font-mono text-gray-900">{r.patient_token}</td>
-                    <td className="px-6 py-3">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        r.severity === "CRITICAL" ? "bg-red-50 text-red-700" :
-                        r.severity === "HIGH"     ? "bg-amber-50 text-amber-700" :
-                        "bg-gray-100 text-gray-600"
-                      }`}>
-                        {r.severity}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-gray-500 text-xs">{r.needed_resources.join(", ")}</td>
-                    <td className="px-6 py-3">
-                      <span className={`flex items-center gap-1 text-xs w-fit ${
-                        r.status === "COMPLETED"   ? "text-green-600" :
-                        r.status === "TRANSFERRED" ? "text-blue-600" :
-                        "text-gray-400"
-                      }`}>
-                        {r.status === "COMPLETED"   && <CheckCircle2 className="w-3 h-3" />}
-                        {r.status === "TRANSFERRED" && <CheckCircle2 className="w-3 h-3" />}
-                        {r.status === "CANCELLED"   && <XCircle      className="w-3 h-3" />}
-                        {r.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-xs text-gray-400">
-                      {new Date(r.created_at).toLocaleString()}
-                    </td>
-                  </tr>
+
+          {grouped.map(({ label, items }) => (
+            <div key={label} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              {/* Date header */}
+              <div className="flex items-center gap-2 px-6 py-3 bg-gray-50 border-b border-gray-100">
+                <CalendarDays className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-xs font-semibold text-gray-600">{label}</span>
+                <span className="ml-auto text-xs text-gray-400">{items.length} request{items.length !== 1 ? "s" : ""}</span>
+              </div>
+
+              <div className="divide-y divide-gray-50">
+                {items.map((r) => (
+                  <div key={r.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50 transition-colors">
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full border shrink-0 ${
+                      r.severity === "CRITICAL" ? "bg-red-50 text-red-700 border-red-200" :
+                      r.severity === "HIGH"     ? "bg-amber-50 text-amber-700 border-amber-200" :
+                      r.severity === "MODERATE" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                      "bg-green-50 text-green-700 border-green-200"
+                    }`}>
+                      {r.severity}
+                    </span>
+                    <span className="font-mono text-sm text-gray-900">{r.patient_token}</span>
+                    <div className="flex-1 flex flex-wrap gap-1">
+                      {(r.needed_resources as string[]).map(res => (
+                        <span key={res} className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium">
+                          {res.replace(/_/g, " ")}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="text-xs text-gray-400 shrink-0">
+                      {new Date(r.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <span className={`flex items-center gap-1 text-xs font-medium shrink-0 ${
+                      r.status === "COMPLETED"   ? "text-green-600" :
+                      r.status === "TRANSFERRED" ? "text-blue-600"  :
+                      "text-gray-400"
+                    }`}>
+                      {r.status === "COMPLETED"   && <CheckCircle2 className="w-3 h-3" />}
+                      {r.status === "TRANSFERRED" && <CheckCircle2 className="w-3 h-3" />}
+                      {r.status === "CANCELLED"   && <XCircle      className="w-3 h-3" />}
+                      {r.status}
+                    </span>
+                    <Link href={`/hospital/emergency/${r.id}`} className="text-xs text-[#1976D2] hover:underline flex items-center gap-1 shrink-0">
+                      <Eye className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
